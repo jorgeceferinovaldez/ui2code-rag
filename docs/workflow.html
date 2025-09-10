@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workflow - Sistema Multi-Agente UI-to-Code</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #2d3748;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .workflow-container {
+            padding: 40px;
+            background: #fafbfc;
+        }
+
+        .download-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        #workflow-svg {
+            width: 100%;
+            height: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: white;
+        }
+
+        .step-box {
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+        }
+
+        .step-text {
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .step-description {
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 11px;
+            font-weight: 400;
+            opacity: 0.8;
+        }
+
+        .arrow {
+            fill: #718096;
+        }
+
+        .agent-box {
+            filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.12));
+        }
+
+        .footer {
+            background: #f7fafc;
+            padding: 20px;
+            text-align: center;
+            color: #718096;
+            border-top: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Sistema Multi-Agente UI-to-Code</h1>
+            <p>Flujo de trabajo completo desde imagen hasta código HTML/Tailwind CSS</p>
+        </div>
+
+        <div class="workflow-container">
+            <div class="download-section">
+                <button class="download-btn" onclick="downloadWorkflow()">
+                    Descargar Workflow como PNG
+                </button>
+            </div>
+
+            <svg id="workflow-svg" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+                <!-- Definiciones de gradientes -->
+                <defs>
+                    <linearGradient id="userGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#ffeaa7;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#fdcb6e;stop-opacity:1" />
+                    </linearGradient>
+                    
+                    <linearGradient id="visualGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#a8e6cf;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#88d8a3;stop-opacity:1" />
+                    </linearGradient>
+                    
+                    <linearGradient id="ragGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#74b9ff;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#0984e3;stop-opacity:1" />
+                    </linearGradient>
+                    
+                    <linearGradient id="codeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#fd79a8;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#e84393;stop-opacity:1" />
+                    </linearGradient>
+                    
+                    <linearGradient id="outputGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#c7ecee;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#81ecec;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+
+                <!-- Paso 1: Usuario -->
+                <g class="step-box">
+                    <rect x="50" y="50" width="140" height="80" rx="12" fill="url(#userGradient)" stroke="#e17055" stroke-width="2"/>
+                    <text x="120" y="75" text-anchor="middle" class="step-text" fill="#2d3436">1. Usuario</text>
+                    <text x="120" y="95" text-anchor="middle" class="step-description" fill="#2d3436">Sube imagen UI</text>
+                    <text x="120" y="108" text-anchor="middle" class="step-description" fill="#2d3436">+ instrucciones</text>
+                </g>
+
+                <!-- Flecha 1 -->
+                <path d="M200 90 L240 90" stroke="#718096" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+
+                <!-- Paso 2: Agente Visual -->
+                <g class="agent-box">
+                    <rect x="250" y="30" width="160" height="120" rx="12" fill="url(#visualGradient)" stroke="#00b894" stroke-width="2"/>
+                    <text x="330" y="55" text-anchor="middle" class="step-text" fill="#2d3436">2. Agente Visual</text>
+                    <text x="330" y="75" text-anchor="middle" class="step-description" fill="#2d3436">Análisis con IA</text>
+                    <text x="330" y="90" text-anchor="middle" class="step-description" fill="#2d3436">• Componentes UI</text>
+                    <text x="330" y="105" text-anchor="middle" class="step-description" fill="#2d3436">• Layout y estilos</text>
+                    <text x="330" y="120" text-anchor="middle" class="step-description" fill="#2d3436">• Colores y tipografía</text>
+                </g>
+
+                <!-- Flecha 2 -->
+                <path d="M420 90 L460 90" stroke="#718096" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+
+                <!-- Paso 3: Sistema RAG -->
+                <g class="step-box">
+                    <rect x="470" y="30" width="180" height="120" rx="12" fill="url(#ragGradient)" stroke="#0984e3" stroke-width="2"/>
+                    <text x="560" y="55" text-anchor="middle" class="step-text" fill="#ffffff">3. Sistema RAG Híbrido</text>
+                    <text x="560" y="75" text-anchor="middle" class="step-description" fill="#ffffff">Búsqueda de patrones</text>
+                    <text x="560" y="90" text-anchor="middle" class="step-description" fill="#ffffff">• BM25 (léxica)</text>
+                    <text x="560" y="105" text-anchor="middle" class="step-description" fill="#ffffff">• Vector (semántica)</text>
+                    <text x="560" y="120" text-anchor="middle" class="step-description" fill="#ffffff">• Cross-Encoder</text>
+                </g>
+
+                <!-- Flecha 3 -->
+                <path d="M660 90 L700 90" stroke="#718096" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+
+                <!-- Paso 4: Agente de Código -->
+                <g class="agent-box">
+                    <rect x="710" y="30" width="160" height="120" rx="12" fill="url(#codeGradient)" stroke="#e84393" stroke-width="2"/>
+                    <text x="790" y="55" text-anchor="middle" class="step-text" fill="#ffffff">4. Agente de Código</text>
+                    <text x="790" y="75" text-anchor="middle" class="step-description" fill="#ffffff">Generación personalizada</text>
+                    <text x="790" y="90" text-anchor="middle" class="step-description" fill="#ffffff">• Análisis visual</text>
+                    <text x="790" y="105" text-anchor="middle" class="step-description" fill="#ffffff">• Patrones RAG</text>
+                    <text x="790" y="120" text-anchor="middle" class="step-description" fill="#ffffff">• Instrucciones usuario</text>
+                </g>
+
+                <!-- Flecha 4 -->
+                <path d="M880 90 L920 90" stroke="#718096" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+
+                <!-- Paso 5: Salida -->
+                <g class="step-box">
+                    <rect x="930" y="50" width="140" height="80" rx="12" fill="url(#outputGradient)" stroke="#00cec9" stroke-width="2"/>
+                    <text x="1000" y="75" text-anchor="middle" class="step-text" fill="#2d3436">5. Código Final</text>
+                    <text x="1000" y="95" text-anchor="middle" class="step-description" fill="#2d3436">HTML/Tailwind CSS</text>
+                    <text x="1000" y="108" text-anchor="middle" class="step-description" fill="#2d3436">artesanal</text>
+                </g>
+
+                <!-- Base de conocimiento -->
+                <g class="step-box">
+                    <rect x="400" y="200" width="200" height="100" rx="12" fill="#f8f9fa" stroke="#dee2e6" stroke-width="2"/>
+                    <text x="500" y="225" text-anchor="middle" class="step-text" fill="#495057">Base de Conocimiento</text>
+                    <text x="500" y="245" text-anchor="middle" class="step-description" fill="#6c757d">WebSight Dataset</text>
+                    <text x="500" y="260" text-anchor="middle" class="step-description" fill="#6c757d">20+ ejemplos HTML/CSS</text>
+                    <text x="500" y="275" text-anchor="middle" class="step-description" fill="#6c757d">Pinecone Vector DB</text>
+                </g>
+
+                <!-- Flecha hacia base de conocimiento -->
+                <path d="M560 150 L500 190" stroke="#adb5bd" stroke-width="2" fill="none" marker-end="url(#arrowhead)" stroke-dasharray="5,5"/>
+
+                <!-- Tecnologías utilizadas -->
+                <g class="step-box">
+                    <rect x="50" y="350" width="180" height="140" rx="12" fill="#e9ecef" stroke="#adb5bd" stroke-width="2"/>
+                    <text x="140" y="375" text-anchor="middle" class="step-text" fill="#495057">Tecnologías</text>
+                    <text x="140" y="400" text-anchor="middle" class="step-description" fill="#6c757d">Visual: Gemini Flash 1.5</text>
+                    <text x="140" y="415" text-anchor="middle" class="step-description" fill="#6c757d">Código: DeepSeek R1</text>
+                    <text x="140" y="430" text-anchor="middle" class="step-description" fill="#6c757d">Embeddings: MiniLM-L6</text>
+                    <text x="140" y="445" text-anchor="middle" class="step-description" fill="#6c757d">Vector DB: Pinecone</text>
+                    <text x="140" y="460" text-anchor="middle" class="step-description" fill="#6c757d">Interface: Streamlit</text>
+                </g>
+
+                <!-- Características especiales -->
+                <g class="step-box">
+                    <rect x="270" y="350" width="180" height="140" rx="12" fill="#fff3cd" stroke="#ffc107" stroke-width="2"/>
+                    <text x="360" y="375" text-anchor="middle" class="step-text" fill="#856404">Características</text>
+                    <text x="360" y="400" text-anchor="middle" class="step-description" fill="#856404">Multiidioma (ES/EN)</text>
+                    <text x="360" y="415" text-anchor="middle" class="step-description" fill="#856404">Sin íconos externos</text>
+                    <text x="360" y="430" text-anchor="middle" class="step-description" fill="#856404">Diseño responsive</text>
+                    <text x="360" y="445" text-anchor="middle" class="step-description" fill="#856404">Código artesanal</text>
+                    <text x="360" y="460" text-anchor="middle" class="step-description" fill="#856404">OpenRouter económico</text>
+                </g>
+
+                <!-- Flujo de datos adicional -->
+                <g class="step-box">
+                    <rect x="490" y="350" width="180" height="140" rx="12" fill="#d1ecf1" stroke="#17a2b8" stroke-width="2"/>
+                    <text x="580" y="375" text-anchor="middle" class="step-text" fill="#0c5460">Flujo de Datos</text>
+                    <text x="580" y="400" text-anchor="middle" class="step-description" fill="#0c5460">1. Imagen → Análisis visual</text>
+                    <text x="580" y="415" text-anchor="middle" class="step-description" fill="#0c5460">2. Descripción → RAG search</text>
+                    <text x="580" y="430" text-anchor="middle" class="step-description" fill="#0c5460">3. Patrones → Generación</text>
+                    <text x="580" y="445" text-anchor="middle" class="step-description" fill="#0c5460">4. Instrucciones → Personalización</text>
+                    <text x="580" y="460" text-anchor="middle" class="step-description" fill="#0c5460">5. Output → HTML/CSS</text>
+                </g>
+
+                <!-- Métricas y rendimiento -->
+                <g class="step-box">
+                    <rect x="710" y="350" width="180" height="140" rx="12" fill="#d4edda" stroke="#28a745" stroke-width="2"/>
+                    <text x="800" y="375" text-anchor="middle" class="step-text" fill="#155724">Rendimiento</text>
+                    <text x="800" y="400" text-anchor="middle" class="step-description" fill="#155724">Tiempo: ~10-15 segundos</text>
+                    <text x="800" y="415" text-anchor="middle" class="step-description" fill="#155724">Costo: ~$0.01 por consulta</text>
+                    <text x="800" y="430" text-anchor="middle" class="step-description" fill="#155724">Precisión RAG: 85%+</text>
+                    <text x="800" y="445" text-anchor="middle" class="step-description" fill="#155724">Escalable con Pinecone</text>
+                    <text x="800" y="460" text-anchor="middle" class="step-description" fill="#155724">Deployment: Streamlit</text>
+                </g>
+
+                <!-- Definición de flecha -->
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+                     refX="9" refY="3.5" orient="auto" class="arrow">
+                        <polygon points="0 0, 10 3.5, 0 7" />
+                    </marker>
+                </defs>
+
+                <!-- Título del diagrama -->
+                <text x="600" y="680" text-anchor="middle" style="font-size: 24px; font-weight: 700; fill: #2d3748;">
+                    Sistema Multi-Agente UI-to-Code
+                </text>
+                <text x="600" y="710" text-anchor="middle" style="font-size: 16px; fill: #718096;">
+                    Conversión inteligente de diseños UI a código HTML/Tailwind CSS
+                </text>
+
+                <!-- Leyenda de colores -->
+                <text x="50" y="750" style="font-size: 14px; font-weight: 600; fill: #2d3748;">Leyenda:</text>
+                <circle cx="70" cy="770" r="8" fill="url(#userGradient)"/>
+                <text x="85" y="775" style="font-size: 12px; fill: #718096;">Entrada usuario</text>
+                <circle cx="200" cy="770" r="8" fill="url(#visualGradient)"/>
+                <text x="215" y="775" style="font-size: 12px; fill: #718096;">Agente Visual</text>
+                <circle cx="320" cy="770" r="8" fill="url(#ragGradient)"/>
+                <text x="335" y="775" style="font-size: 12px; fill: #718096;">Sistema RAG</text>
+                <circle cx="430" cy="770" r="8" fill="url(#codeGradient)"/>
+                <text x="445" y="775" style="font-size: 12px; fill: #718096;">Agente Código</text>
+                <circle cx="560" cy="770" r="8" fill="url(#outputGradient)"/>
+                <text x="575" y="775" style="font-size: 12px; fill: #718096;">Código generado</text>
+            </svg>
+        </div>
+
+        <div class="footer">
+            <p>Sistema Multi-Agente UI-to-Code • Generado con HTML5 + SVG + CSS3</p>
+        </div>
+    </div>
+
+    <script>
+        function downloadWorkflow() {
+            const svg = document.getElementById('workflow-svg');
+            const svgData = new XMLSerializer().serializeToString(svg);
+            
+            // Crear un canvas para convertir SVG a PNG
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            // Configurar el canvas con las dimensiones del SVG
+            canvas.width = 1200;
+            canvas.height = 800;
+            
+            img.onload = function() {
+                // Fondo blanco para el PNG
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Dibujar el SVG en el canvas
+                ctx.drawImage(img, 0, 0);
+                
+                // Crear enlace de descarga
+                const link = document.createElement('a');
+                link.download = 'ui-to-code-workflow.png';
+                link.href = canvas.toDataURL('image/png');
+                
+                // Descargar automáticamente
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+            
+            // Convertir SVG a data URL
+            const svgBlob = new Blob([svgData], {type: 'image/svg+xml'});
+            const url = URL.createObjectURL(svgBlob);
+            img.src = url;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+# Configuration for UI-to-Code Multi-Agent System
+
+# Data directories
+data:
+  corpus_dir: "corpus"
+
+# RAG specific paths (existing source code)
+rag:
+  ingestion_dir: "src/rag/ingestion"
+  retrievers_dir: "src/rag/retrievers"
+  evaluators_dir: "src/rag/evaluators"
+  core_dir: "src/rag/core"
+
+# Application paths
+app:
+  main_file: "app/streamlit_app.py"
+
+# Source code structure
+src:
+  agents_dir: "src/agents"
+  runtime_dir: "src/runtime"
+
+# Development directories (only existing ones)
+development:
+  docs_dir: "docs"
+
+# UI-to-Code specific paths
+ui_to_code:
+  ui_examples_dir: "ui_examples"
+  temp_images_dir: "data/temp_images"
+  generated_code_dir: "data/generated_code"
+  websight_data_dir: "data/websight"
+
+# Configuration files
+files:
+  requirements_file: "requirements.txt"
+  requirements_dev_file: "requirements-dev.txt"
+  setup_file: "setup.py"
+  pyproject_file: "pyproject.toml"
+  config_file: "src/config.yaml"
+  env_file: ".env"
+  env_example_file: ".env.example"
+  makefile: "Makefile"
+  readme_file: "README.md"
+  gitignore_file: ".gitignore"
+  check_deps_file: "check_deps.py"
+  quick_start_file: "quick_start.py"
+  run_streamlit_file: "run_streamlit.py"
