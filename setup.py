@@ -94,7 +94,7 @@ setup(
     entry_points={
         'console_scripts': [
             'ui-to-code=run_streamlit:main',
-            'quick-start=quick_start:main',
+            'quick-start=quick_suitart:main',
         ],
     },
     classifiers=[

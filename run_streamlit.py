@@ -6,6 +6,9 @@ Script to run the Streamlit RAG application
 import subprocess
 import sys
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+from src.config import project_dir
 
 def main():
     """Run the Streamlit app"""
@@ -17,8 +20,15 @@ def main():
         print(f"Error: Streamlit app not found at {app_path}")
         sys.exit(1)
     
+    # Load environment variables
+    env_path = project_dir() / ".env"
+    if env_path.exists():
+        load_dotenv(dotenv_path=env_path, override=True)
+
+    streamlit_port = os.getenv("STREAMLIT_PORT", "8501")
+    
     print("Starting Streamlit RAG application...")
-    print("Access the app at: http://localhost:8501")
+    print(f"Access the app at: http://localhost:{streamlit_port}")
     print("Press Ctrl+C to stop the application")
     
     # Run streamlit
@@ -26,7 +36,7 @@ def main():
         subprocess.run([
             sys.executable, "-m", "streamlit", "run", str(app_path),
             "--server.headless", "false",
-            "--server.port", "8501",
+            "--server.port", streamlit_port,
             "--server.address", "0.0.0.0"
         ])
     except KeyboardInterrupt:
