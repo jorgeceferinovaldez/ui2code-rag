@@ -234,13 +234,15 @@ def get_ui_agents():
     Initialize and cache UI-to-Code agents
     """
     try:
-        from src.agents import VisualAgent, CodeRAGAgent
+        from src.agents import VisualAgent, CodeRAGAgent, CodeRAGAgentProxy, VisualAgentProxy
         
         visual_agent = VisualAgent()
         code_agent = CodeRAGAgent()
-        
-        return visual_agent, code_agent
-        
+        code_agent_proxy = CodeRAGAgentProxy(code_agent)
+        visual_agent_proxy = VisualAgentProxy(visual_agent)
+
+        return visual_agent_proxy, code_agent_proxy
+
     except Exception as e:
         st.error(f"Failed to initialize UI agents: {str(e)}")
         return None, None

@@ -48,6 +48,9 @@ else:
         
         # Legacy PDF support
         "pdfplumber>=0.11.0",
+        
+        # Guardrails
+        "guardrails-ai>=0.6.6",
     ]
 
 setup(
