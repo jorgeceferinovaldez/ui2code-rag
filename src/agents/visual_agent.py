@@ -96,7 +96,22 @@ class VisualAgent:
                 "error": f"Image preprocessing failed: {str(e)}",
                 "image_path": image_path
             }
+        
     
+    def _to_style_tokens(self, dominant_colors, layout_info):
+        def quantize_spacing(px):
+            # steps Tailwind: 0, 0.5, 1, 1.5, 2, 3, 4, 6, 8, 10, 12...
+            steps = [0,2,4,6,8,12,16,24,32,40,48,64]
+            # simple snap
+            return sorted(set(steps))
+
+        return {
+            "colors": [f"#{c['r']:02x}{c['g']:02x}{c['b']:02x}" for c in dominant_colors][:4],
+            "font_category": "sans",                   # heurística básica
+            "spacing_scale": quantize_spacing(0),     # podrías usar distancias entre bboxes
+            "radii": ["none","md","lg"],
+            "shadows": ["sm","md"]
+        }
     def _extract_dominant_colors(self, image: np.ndarray, k: int = 5) -> list:
         """Extract dominant colors using k-means clustering"""
         try:
@@ -159,7 +174,10 @@ class VisualAgent:
         try:
             # Preprocess image
             image_metadata = self.preprocess_image(image_path)
-            
+            style_tokens = self._to_style_tokens(
+                image_metadata.get("dominant_colors", []),
+                image_metadata.get("layout_hints", {})
+            )
             if "error" in image_metadata:
                 return image_metadata
             
@@ -213,6 +231,7 @@ class VisualAgent:
             final_result = {
                 **analysis_result,
                 "image_metadata": image_metadata,
+                "style_tokens": style_tokens,
                 "model_used": self.model,
                 "analysis_timestamp": None
             }

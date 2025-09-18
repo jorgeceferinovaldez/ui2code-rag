@@ -13,6 +13,10 @@ from src.config import project_dir, generated_code_dir, ui_examples_dir
 from src.rag.core.rag_pipeline import RagPipeline
 from src.rag.core.documents import Document
 
+from src.core.style_tokens import tokens_to_tailwind_config, build_allowed
+from src.core.html_utils import extract_tw_classes, inject_tailwind_inline_config
+from src.core.tw_validator import validate_classes, strip_md_fences
+
 
 class CodeRAGAgent:
     """
@@ -52,6 +56,12 @@ class CodeRAGAgent:
         self.rag_pipeline = None
         self._initialize_rag_pipeline()
     
+    def _write_tailwind_config(self, style_tokens: dict):
+        cfg = tokens_to_tailwind_config(style_tokens or {})
+        out_dir = generated_code_dir()
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / "tailwind.config.js").write_text(cfg, encoding="utf-8")
+
     def _initialize_rag_pipeline(self):
         """Initialize RAG pipeline with HTML/CSS examples"""
         try:
@@ -390,48 +400,61 @@ class CodeRAGAgent:
             print(f"Error retrieving patterns: {e}")
             return []
     
-    def generate_code(self, patterns: List[Tuple], visual_analysis: Dict[str, Any], custom_instructions: str = "") -> Dict[str, Any]:
-        """
-        Generate HTML/CSS code based on patterns and visual analysis
-        
-        Args:
-            patterns: Retrieved similar patterns
-            visual_analysis: Visual analysis from VisualAgent
-            custom_instructions: Additional user requirements and customizations
-            
-        Returns:
-            Generated code and metadata
-        """
+    def generate_code(self, patterns, visual_analysis, custom_instructions: str = "") -> Dict[str, Any]:
         try:
-            # Prepare context from retrieved patterns
+            # 1) contexto de patrones + clases observadas
             pattern_context = self._format_patterns_for_generation(patterns)
-            
-            # Create generation prompt
-            prompt = self._get_generation_prompt(visual_analysis, pattern_context, custom_instructions)
-            
-            # Generate code using language model
+            retrieved_classes = set()
+            for _, chunk, _, _ in (patterns or []):
+                retrieved_classes |= extract_tw_classes(chunk)
+
+            # 2) tokens y config Tailwind
+            style_tokens = visual_analysis.get("style_tokens", {}) or {}
+            self._write_tailwind_config(style_tokens)
+            allowed = build_allowed(style_tokens, retrieved_classes)
+
+            # 3) prompt con whitelist
+            prompt = self._get_generation_prompt(
+                visual_analysis, pattern_context, custom_instructions, allowed
+            )
+
+            # 4) generación estricta
             response = self.client.chat.completions.create(
                 model=self.code_model,
                 messages=[
-                    {"role": "system", "content": "You are an expert HTML/CSS developer specializing in modern, clean, artisanal web design."},
+                    {"role": "system", "content": "Eres un desarrollador experto en HTML con Tailwind. SOLO usas clases permitidas."},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=2000,
-                temperature=0.1
+                temperature=0.0,
+                top_p=0.2,
+                **({"seed": 42} if self.use_openrouter else {})  # si el gateway soporta seed
             )
-            
+
             generated_code = response.choices[0].message.content
-            
-            # Clean up the generated code
-            cleaned_code = self._clean_generated_code(generated_code)
-            
+            cleaned_code = strip_md_fences(generated_code).strip()
+
+            # 5) validar clases
+            bad = validate_classes(cleaned_code, allowed)
+            if bad:
+                cleaned_code = self._repair(cleaned_code, bad, allowed)
+                bad = validate_classes(cleaned_code, allowed)  # segunda pasada
+
+            # 6) (opcional CDN) inyectar tailwind.config inline en <head>
+            cleaned_code = inject_tailwind_inline_config(cleaned_code, style_tokens)
+
+            # 7) métrica simple
+            total_classes = len(extract_tw_classes(cleaned_code)) or 1
+            shr = round((len(bad) / total_classes) * 100, 2) if bad else 0.0
+
             return {
                 "html_code": cleaned_code,
                 "generation_metadata": {
                     "model_used": self.code_model,
-                    "patterns_used": len(patterns),
+                    "patterns_used": len(patterns or []),
                     "visual_components": visual_analysis.get("components", []),
                     "custom_instructions": custom_instructions.strip() if custom_instructions else "",
+                    "style_hallucination_rate_pct": shr,
                     "timestamp": datetime.now().isoformat()
                 },
                 "visual_analysis_summary": {
@@ -440,7 +463,7 @@ class CodeRAGAgent:
                     "style": visual_analysis.get("style", "modern")
                 }
             }
-            
+
         except Exception as e:
             return {
                 "error": f"Code generation failed: {str(e)}",
@@ -453,6 +476,31 @@ class CodeRAGAgent:
                 }
             }
     
+    
+    def _repair(self, html: str, bad: list[str], allowed: set[str]) -> str:
+        repair_prompt = f"""
+    Reemplaza únicamente estas clases inválidas {bad} por alternativas válidas de ESTA LISTA:
+    {sorted(list(allowed))}
+    No agregues clases nuevas. Devuelve SOLO el HTML reparado.
+    ---
+    HTML:
+    {html}
+    """
+        r = self.client.chat.completions.create(
+            model=self.code_model,
+            messages=[
+                {"role": "system", "content": "Reparador de Tailwind estricto."},
+                {"role": "user", "content": repair_prompt}
+            ],
+            max_tokens=1800,
+            temperature=0.0,
+            top_p=0.2,
+            **({"seed": 42} if self.use_openrouter else {})
+        )
+        fixed = strip_md_fences(r.choices[0].message.content).strip()
+        return fixed
+
+
     def _format_patterns_for_generation(self, patterns: List[Tuple]) -> str:
         """Format retrieved patterns for code generation prompt"""
         if not patterns:
@@ -477,64 +525,36 @@ Source: {source_name}
         
         return "\n".join(formatted_patterns)
     
-    def _get_generation_prompt(self, visual_analysis: Dict[str, Any], pattern_context: str, custom_instructions: str = "") -> str:
-        """Create the code generation prompt"""
-        
+    def _get_generation_prompt(self, visual_analysis: Dict[str, Any], pattern_context: str,
+                           custom_instructions: str, allowed_classes: set) -> str:
         components = visual_analysis.get("components", [])
         layout = visual_analysis.get("layout", "modern layout")
         style = visual_analysis.get("style", "clean and modern")
         color_scheme = visual_analysis.get("color_scheme", "neutral colors")
-        
-        # Build the prompt with custom instructions
+
+        allowed_list = "\n".join(sorted(list(allowed_classes))[:600])  # cap to avoid long ctx
+
         base_prompt = f"""Basándote en este análisis visual:
-- Componentes identificados: {', '.join(components)}
-- Layout: {layout}
-- Estilo: {style}
-- Esquema de colores: {color_scheme}
+    - Componentes identificados: {', '.join(components)}
+    - Layout: {layout}
+    - Estilo: {style}
+    - Esquema de colores: {color_scheme}
 
-Y estos ejemplos similares encontrados:
-{pattern_context}"""
+    Y estos ejemplos similares encontrados:
+    {pattern_context}
 
-        # Add custom instructions if provided
+    REGLAS ESTRICTAS:
+    - Usa EXCLUSIVAMENTE estas clases Tailwind (whitelist):
+    {allowed_list}
+    - No inventes clases ni CSS inline.
+    - Si una clase no existe en la lista, reemplázala por la opción semánticamente más cercana de la lista.
+    - HTML semántico, responsive (mobile-first), sin JavaScript, con accesibilidad básica (alt/labels).
+    - Responde SOLO con el HTML (sin bloques markdown, ni explicaciones).
+    """
         if custom_instructions and custom_instructions.strip():
-            base_prompt += f"""
+            base_prompt += f"\nINSTRUCCIONES ADICIONALES:\n{custom_instructions.strip()}\n"
+        return base_prompt
 
-INSTRUCCIONES ADICIONALES DEL USUARIO:
-{custom_instructions.strip()}"""
-
-        # Complete the prompt
-        full_prompt = base_prompt + """
-
-Genera código HTML limpio y moderno con Tailwind CSS que implemente el diseño analizado.
-
-ESTILO ARTESANAL - INSTRUCCIONES ESPECÍFICAS:
-- EVITAR completamente íconos de librerías externas (FontAwesome, Heroicons, etc.)
-- NO usar símbolos Unicode decorativos (→, ★, ✓, etc.)
-- EVITAR gradientes muy llamativos y efectos "AI-looking"
-- PREFERIR elementos geométricos simples creados con CSS/Tailwind
-- USAR texto descriptivo plano en lugar de íconos
-- MANTENER diseño limpio y profesional
-- APLICAR principios de tipografía como elemento de diseño
-
-REQUISITOS TÉCNICOS:
-- Solo HTML y clases Tailwind CSS
-- Sin JavaScript
-- Responsive design (mobile-first)
-- Estructura semántica correcta
-- Accesibilidad básica (alt texts, labels apropiados)
-
-ESTRUCTURA ESPERADA:
-- DOCTYPE html completo
-- Head con meta tags apropiados
-- CDN de Tailwind CSS incluido
-- Estructura de body organizada
-
-IMPORTANTE: Si el usuario proporcionó instrucciones adicionales, asegúrate de incorporarlas en el código generado.
-
-Responde SOLO con el código HTML, sin explicaciones adicionales."""
-        
-        return full_prompt
-    
     def _clean_generated_code(self, code: str) -> str:
         """Clean up generated code"""
         # Remove markdown code blocks if present

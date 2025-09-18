@@ -1,6 +1,6 @@
 {
-  "websight_id": "websight_sample_0004",
-  "url": "https://example-4.com",
+  "websight_id": "websight_sample_0024",
+  "url": "https://example-24.com",
   "type": "blog_post",
   "description": "Blog post layout with header, content, and sidebar",
   "components": [
@@ -10,8 +10,8 @@
     "typography",
     "navigation"
   ],
-  "created_at": "2025-09-18T01:48:09.139933",
+  "created_at": "2025-09-18T01:48:09.150663",
   "source_type": "websight",
   "search_text": "Type: blog_post | Description: Blog post layout with header, content, and sidebar | Components: article, header, sidebar, typography, navigation | Description: Blog post layout with header, content, and sidebar | UI Components: article, header, sidebar, typography, navigation | Type: blog_post | Content: Blog Post Technology The Future of Web Development: Trends to Watch By Alex Johnson \u2022 March 15, 2024 \u2022 5 min read Web development continues to evolve at a rapid pace, with new technologies and frameworks emerging regularly. \n                        Understanding these trends is crucial for developers who want to stay competitive in the field. Key Trends in 2024 This year has brought significant changes to how we approach web development. From improved performance \n                        optimiz... | HTML Elements: text-4xl, h2, text-xl, text-2xl, article, a, text-sm, text-gray-600, html, text-gray-900, h-12, hover:text-blue-600, grid-cols-1, rounded-lg, script, aside, bg-white, w-12, text-blue-600, flex, bg-gray-50, bg-blue-500, lg:grid-cols-3, rounded-full, max-w-6xl, header, grid, p-6, h3, p, head, max-w-none, title, text-gray-700, body, span, text-lg, gap-8, meta, div, h1",
-  "saved_at": "2025-09-18T02:38:28.865764"
+  "saved_at": "2025-09-18T02:38:28.870216"
 }

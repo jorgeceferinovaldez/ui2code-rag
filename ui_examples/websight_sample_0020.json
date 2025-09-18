@@ -1,6 +1,6 @@
 {
-  "websight_id": "websight_sample_0015",
-  "url": "https://example-15.com",
+  "websight_id": "websight_sample_0020",
+  "url": "https://example-20.com",
   "type": "landing_page",
   "description": "Modern landing page with hero section, navigation, and call-to-action",
   "components": [
@@ -10,8 +10,8 @@
     "cta",
     "footer"
   ],
-  "created_at": "2025-09-18T01:48:09.146160",
+  "created_at": "2025-09-18T01:48:09.148464",
   "source_type": "websight",
   "search_text": "Type: landing_page | Description: Modern landing page with hero section, navigation, and call-to-action | Components: header, nav, hero, cta, footer | Description: Modern landing page with hero section, navigation, and call-to-action | UI Components: header, nav, hero, cta, footer | Type: landing_page | Content: Product Landing ProductName Features Pricing About Sign Up Build Something Amazing Our platform helps you create, manage, and scale your ideas with powerful tools and intuitive design. Get Started Free Watch Demo... | HTML Elements: text-xl, text-center, text-2xl, a, text-gray-600, html, hover:text-blue-600, h-16, text-gray-900, gap-4, rounded-lg, md:flex, text-white, hover:bg-blue-700, script, max-w-2xl, bg-white, text-blue-600, bg-blue-600, flex, nav, section, max-w-4xl, main, header, button, shadow-sm, p, head, title, text-gray-700, body, text-5xl, max-w-7xl, text-lg, meta, div, h1",
-  "saved_at": "2025-09-18T02:38:28.867658"
+  "saved_at": "2025-09-18T02:38:28.868928"
 }
