@@ -23,7 +23,16 @@ python quick_start.py
 # Opción 2: Configuración manual
 pip install -e .
 cp .env.example .env
-# Editar .env con tus claves API (OpenRouter recomendado)
+# 2.1 Editar .env con tus claves API (OpenRouter recomendado)
+
+# Configurar guardrails
+guardrails configure
+
+guardrails hub install hub://guardrails/regex_match
+
+guardrails hub install hub://guardrails/valid_json
+
+
 python run_streamlit.py
 
 # Opción 3: Verificar dependencias

@@ -46,3 +46,7 @@ isort>=5.12.0                    # Import sorting
 # Optional performance improvements
 # torch>=2.0.0                   # Uncomment for GPU acceleration
 # transformers>=4.30.0           # Uncomment for local models
+
+
+#Guardrails
+guardrails-ai>=0.6.6

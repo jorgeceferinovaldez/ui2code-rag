@@ -32,3 +32,5 @@ line-profiler>=4.0.0            # Line-by-line profiling
 tqdm>=4.65.0                     # Progress bars
 rich>=13.0.0                     # Rich console output
 click>=8.0.0                     # CLI building
+
+guardrails-ai>=0.6.6
