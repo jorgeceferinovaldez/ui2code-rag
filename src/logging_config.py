@@ -13,7 +13,9 @@ def log_with_class(logger, level, msg, self=None):
 
 LOG_DIR = os.path.join(os.path.dirname(__file__), '..', 'logs')
 os.makedirs(LOG_DIR, exist_ok=True)
-LOG_FILE = os.path.join(LOG_DIR, 'project.log')
+from datetime import datetime
+date_str = datetime.now().strftime('%Y-%m-%d')
+LOG_FILE = os.path.join(LOG_DIR, f'ui2code.{date_str}.log')
 
 logger = logging.getLogger('ui2code_rag')
 logger.setLevel(logging.INFO)
@@ -21,7 +23,6 @@ logger.setLevel(logging.INFO)
 handler = TimedRotatingFileHandler(
     LOG_FILE, when='midnight', interval=1, backupCount=7, encoding='utf-8'
 )
-handler.suffix = "%Y-%m-%d"
 formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s %(module)s.%(funcName)s [%(filename)s:%(lineno)d] %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
