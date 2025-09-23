@@ -32,6 +32,7 @@ guardrails hub install hub://guardrails/regex_match
 
 guardrails hub install hub://guardrails/valid_json
 
+guardrails hub install hub://guardrails/web_sanitization
 
 python run_streamlit.py
 
