@@ -1,10 +1,10 @@
 import json
 from guardrails import Guard, OnFailAction
-from guardrails.hub import ValidJson
+from guardrails.hub import ValidJson, WebSanitization
 from src.agents.valid_schema_json import ValidSchemaJson
 from src.agents.valid_html import IsHTMLField
 from src.logging_config import logger
-
+import html
 from typing import Dict, Any, List, Optional, Tuple
 
 
@@ -51,6 +51,9 @@ class CodeRAGAgentProxy:
         ]
         )
 
+        self.sanitization_guard = Guard().use(WebSanitization, on_fail="exception")
+
+
     def generate_code(self, patterns, visual_analysis, custom_instructions=""):
         logger.info(f"Llamada a generate_code con patterns={patterns}, visual_analysis={visual_analysis}, custom_instructions={custom_instructions}")
         result = self.agent.generate_code(patterns, visual_analysis, custom_instructions)
@@ -62,6 +65,15 @@ class CodeRAGAgentProxy:
             validated_output = None
             raise e
         
+        try:
+            html_code = result["html_code"]
+            encoded_html = html.escape(html_code)
+            
+            self.sanitization_guard.validate(
+                encoded_html)
+        except Exception as e:
+            raise e
+
 
         logger.info(f"Generación de código: {result}")
         logger.info(f"Generación de código validada: {validated_output}")

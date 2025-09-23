@@ -57,7 +57,7 @@ class VisualAgentProxy:
         ]
         )
 
-    
+        
 
     def analyze_image(self, image_path):
         logger.info("Mensaje de prueba")
@@ -74,6 +74,7 @@ class VisualAgentProxy:
             raise e
 
 
+        
 
         #if not validated_output.valid:
         #    raise ValueError(f"Análisis inválido: {validated_output.error}")
