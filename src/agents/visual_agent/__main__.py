@@ -1,27 +1,14 @@
+"""Main entry point for the Visual Agent server."""
+
 from loguru import logger
-import os
 import sys
-
 import click
-import httpx
 import uvicorn
-
 from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
-from a2a.server.tasks import (
-    BasePushNotificationSender,
-    InMemoryPushNotificationConfigStore,
-    InMemoryTaskStore,
-)
-from a2a.types import (
-    AgentCapabilities,
-    AgentCard,
-    AgentSkill,
-)
-from dotenv import load_dotenv
-
-from src.agents.visual_a2a_agent.visual_a2a_agent import VisualA2AAgent
-from src.agents.visual_a2a_agent.visual_a2a_agent_executor import VisualA2AAgentExecutor
+from a2a.server.tasks import InMemoryTaskStore
+from a2a.types import AgentCapabilities, AgentCard, AgentSkill
+from src.agents.visual_agent.visual_a2a_agent_executor import VisualA2AAgentExecutor
 
 
 @click.command()
@@ -40,7 +27,7 @@ def main(host: str, port: int):
                 tags=["web-design", "image-analysis", "generator"],
                 examples=["Some web scratch image design."],
                 input_modes=["image/png", "image/jpeg", "image/jpg"],
-                output_modes=["text", "text/plain", "application/json"],
+                output_modes=["application/json"],
             )
         ]
         agent_card = AgentCard(
@@ -48,8 +35,8 @@ def main(host: str, port: int):
             description="Helps with getting information from images.",
             url=f"http://{host}:{port}/",
             version="1.0.0",
-            default_input_modes=VisualA2AAgent.SUPPORTED_CONTENT_TYPES,
-            default_output_modes=VisualA2AAgent.SUPPORTED_CONTENT_TYPES,
+            default_input_modes=["image/png", "image/jpeg", "image/jpg"],
+            default_output_modes=["text/plain", "application/json"],
             capabilities=capabilities,
             skills=skills,
         )
