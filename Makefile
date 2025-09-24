@@ -172,3 +172,5 @@ verify-env:
 	$(PYTHON_INTERPRETER) -c "import sys; print(f'Python executable: {sys.executable}')"
 	@echo "Current directory: $(PWD)"
 	@echo "Environment verification completed"
+
+# TODO: Add A2A servers and other advanced features
