@@ -4,38 +4,32 @@ Wraps the existing RAG pipeline to work with HTML/CSS examples and generates cod
 """
 
 import os
-import json
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any
 from datetime import datetime
 import openai
-
-from src.config import project_dir, generated_code_dir, ui_examples_dir
-from src.rag.core.rag_pipeline import RagPipeline
-from src.rag.core.documents import Document
+from src.config import project_dir, ui_examples_dir
 
 
-class CodeRAGAgent:
+class CodeAgent:
     """
     Agent responsible for retrieving similar HTML/CSS patterns and generating code
     """
-    
+
     def __init__(self):
         """Initialize the Code RAG Agent"""
         # Load environment variables
         from dotenv import load_dotenv
+
         env_path = project_dir() / ".env"
         if env_path.exists():
             load_dotenv(dotenv_path=env_path, override=True)
-        
+
         # Configure OpenRouter client for code generation
         openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
         openrouter_base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
-        
+
         if openrouter_api_key:
-            self.client = openai.OpenAI(
-                base_url=openrouter_base_url,
-                api_key=openrouter_api_key
-            )
+            self.client = openai.OpenAI(base_url=openrouter_base_url, api_key=openrouter_api_key)
             self.code_model = os.getenv("CODE_MODEL", "deepseek/deepseek-coder")
             self.use_openrouter = True
         else:
@@ -47,105 +41,10 @@ class CodeRAGAgent:
                 self.use_openrouter = False
             else:
                 raise ValueError("Neither OPENROUTER_API_KEY nor OPENAI_API_KEY found in environment")
-        
-        # Initialize RAG pipeline
-        self.rag_pipeline = None
-        self._initialize_rag_pipeline()
-    
-    def _initialize_rag_pipeline(self):
-        """Initialize RAG pipeline with HTML/CSS examples"""
-        try:
-            # Load HTML/CSS examples
-            html_examples = self._load_html_examples()
-            
-            if not html_examples:
-                print("Warning: No HTML/CSS examples found. RAG pipeline will not be available.")
-                return
-            
-            # Initialize Pinecone searcher if configured (optional)
-            pinecone_searcher = None
-            if os.getenv("PINECONE_API_KEY"):
-                try:
-                    from src.runtime.adapters.pinecone_adapter import PineconeSearcher
-                    pinecone_searcher = PineconeSearcher(
-                        index_name=os.getenv("PINECONE_INDEX", "rag-index"),
-                        model_name=os.getenv("EMBED_MODEL", "sentence-transformers/all-MiniLM-L6-v2"),
-                        cloud=os.getenv("PINECONE_CLOUD", "aws"),
-                        region=os.getenv("PINECONE_REGION", "us-east-1"),
-                        api_key=os.getenv("PINECONE_API_KEY"),
-                        namespace="html-css-examples"  # Separate namespace for HTML/CSS
-                    )
-                except Exception as e:
-                    print(f"Warning: Could not initialize Pinecone: {e}")
-            
-            # Initialize RAG pipeline
-            self.rag_pipeline = RagPipeline(
-                docs=html_examples,
-                pinecone_searcher=pinecone_searcher,
-                max_tokens_chunk=400,  # Slightly larger chunks for HTML/CSS
-                overlap=100,
-                ce_model="cross-encoder/ms-marco-MiniLM-L-6-v2"
-            )
-            
-            print(f"RAG pipeline initialized with {len(html_examples)} HTML/CSS examples")
-            
-        except Exception as e:
-            print(f"Error initializing RAG pipeline: {e}")
-            self.rag_pipeline = None
-    
-    def _load_html_examples(self) -> List[Document]:
-        """
-        Load HTML/CSS examples from the ui_examples directory
-        This will be expanded to load from WebSight dataset
-        """
-        documents = []
-        
-        try:
-            examples_dir = ui_examples_dir()
-            
-            # Check if examples directory exists
-            if not examples_dir.exists():
-                print(f"Creating examples directory: {examples_dir}")
-                examples_dir.mkdir(parents=True, exist_ok=True)
-                
-                # Create some sample HTML/CSS examples
-                self._create_sample_examples(examples_dir)
-            
-            # Load HTML files
-            html_files = list(examples_dir.glob("**/*.html"))
-            
-            for html_file in html_files:
-                try:
-                    with open(html_file, 'r', encoding='utf-8') as f:
-                        content = f.read()
-                    
-                    # Create document (no metadata parameter in Document class)
-                    doc = Document(
-                        id=html_file.stem,  # Use filename without extension as ID
-                        text=content,
-                        source=str(html_file)
-                    )
-                    
-                    # Add additional attributes
-                    doc.doc_type = "html_example"
-                    doc.filename = html_file.name
-                    doc.html_code = content
-                    doc.file_size = len(content)
-                    documents.append(doc)
-                    
-                except Exception as e:
-                    print(f"Error loading {html_file}: {e}")
-            
-            print(f"Loaded {len(documents)} HTML examples")
-            return documents
-            
-        except Exception as e:
-            print(f"Error loading HTML examples: {e}")
-            return []
-    
+
     def _create_sample_examples(self, examples_dir):
         """Create sample HTML/CSS examples for testing"""
-        
+
         sample_examples = [
             {
                 "filename": "landing_page.html",
@@ -199,7 +98,7 @@ class CodeRAGAgent:
         </section>
     </main>
 </body>
-</html>"""
+</html>""",
             },
             {
                 "filename": "contact_form.html",
@@ -254,7 +153,7 @@ class CodeRAGAgent:
         </div>
     </div>
 </body>
-</html>"""
+</html>""",
             },
             {
                 "filename": "dashboard_card.html",
@@ -342,89 +241,55 @@ class CodeRAGAgent:
         </div>
     </div>
 </body>
-</html>"""
-            }
+</html>""",
+            },
         ]
-        
+
         for example in sample_examples:
             file_path = examples_dir / example["filename"]
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 f.write(example["content"])
-    
-    def retrieve_patterns(self, visual_analysis: Dict[str, Any], top_k: int = 5) -> List[Tuple]:
-        """
-        Retrieve similar HTML/CSS patterns based on visual analysis
-        
-        Args:
-            visual_analysis: Analysis result from VisualAgent
-            top_k: Number of top patterns to retrieve
-            
-        Returns:
-            List of tuples (doc_id, chunk, metadata, score)
-        """
-        if not self.rag_pipeline:
-            return []
-        
-        try:
-            # Extract analysis text for RAG search
-            analysis_text = visual_analysis.get("analysis_text", "")
-            
-            if not analysis_text:
-                # Fallback: construct analysis text from components
-                components = visual_analysis.get("components", [])
-                layout = visual_analysis.get("layout", "")
-                style = visual_analysis.get("style", "")
-                
-                analysis_text = f"UI components: {', '.join(components)}. Layout: {layout}. Style: {style}"
-            
-            # Use RAG pipeline to retrieve similar patterns
-            results = self.rag_pipeline.retrieve_and_rerank(
-                query=analysis_text,
-                top_retrieve=20,  # Retrieve more candidates
-                top_final=top_k   # Return top_k final results
-            )
-            
-            return results
-            
-        except Exception as e:
-            print(f"Error retrieving patterns: {e}")
-            return []
-    
-    def generate_code(self, patterns: List[Tuple], visual_analysis: Dict[str, Any], custom_instructions: str = "") -> Dict[str, Any]:
+
+    def invoke(
+        self, patterns: list[tuple], visual_analysis: dict[str, Any], custom_instructions: str = ""
+    ) -> dict[str, Any]:
         """
         Generate HTML/CSS code based on patterns and visual analysis
-        
+
         Args:
             patterns: Retrieved similar patterns
             visual_analysis: Visual analysis from VisualAgent
             custom_instructions: Additional user requirements and customizations
-            
+
         Returns:
             Generated code and metadata
         """
         try:
             # Prepare context from retrieved patterns
             pattern_context = self._format_patterns_for_generation(patterns)
-            
+
             # Create generation prompt
             prompt = self._get_generation_prompt(visual_analysis, pattern_context, custom_instructions)
-            
+
             # Generate code using language model
             response = self.client.chat.completions.create(
                 model=self.code_model,
                 messages=[
-                    {"role": "system", "content": "You are an expert HTML/CSS developer specializing in modern, clean, artisanal web design."},
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "system",
+                        "content": "You are an expert HTML/CSS developer specializing in modern, clean, artisanal web design.",
+                    },
+                    {"role": "user", "content": prompt},
                 ],
                 max_tokens=2000,
-                temperature=0.1
+                temperature=0.1,
             )
-            
+
             generated_code = response.choices[0].message.content
-            
+
             # Clean up the generated code
             cleaned_code = self._clean_generated_code(generated_code)
-            
+
             return {
                 "html_code": cleaned_code,
                 "generation_metadata": {
@@ -432,15 +297,15 @@ class CodeRAGAgent:
                     "patterns_used": len(patterns),
                     "visual_components": visual_analysis.get("components", []),
                     "custom_instructions": custom_instructions.strip() if custom_instructions else "",
-                    "timestamp": datetime.now().isoformat()
+                    "timestamp": datetime.now().isoformat(),
                 },
                 "visual_analysis_summary": {
                     "components": visual_analysis.get("components", []),
                     "layout": visual_analysis.get("layout", "unknown"),
-                    "style": visual_analysis.get("style", "modern")
-                }
+                    "style": visual_analysis.get("style", "modern"),
+                },
             }
-            
+
         except Exception as e:
             return {
                 "error": f"Code generation failed: {str(e)}",
@@ -449,42 +314,46 @@ class CodeRAGAgent:
                     "model_used": self.code_model,
                     "custom_instructions": custom_instructions.strip() if custom_instructions else "",
                     "error": str(e),
-                    "timestamp": datetime.now().isoformat()
-                }
+                    "timestamp": datetime.now().isoformat(),
+                },
             }
-    
-    def _format_patterns_for_generation(self, patterns: List[Tuple]) -> str:
+
+    def _format_patterns_for_generation(self, patterns: list[tuple]) -> str:
         """Format retrieved patterns for code generation prompt"""
         if not patterns:
             return "No similar patterns found."
-        
+
         formatted_patterns = []
         for i, (doc_id, chunk, metadata, score) in enumerate(patterns, 1):
             # Handle both dict metadata and document attributes
             source_name = "unknown"
             if isinstance(metadata, dict):
-                source_name = metadata.get('filename', metadata.get('source', 'unknown'))
+                source_name = metadata.get("filename", metadata.get("source", "unknown"))
             else:
-                source_name = getattr(metadata, 'filename', getattr(metadata, 'source', 'unknown'))
-            
-            formatted_patterns.append(f"""
+                source_name = getattr(metadata, "filename", getattr(metadata, "source", "unknown"))
+
+            formatted_patterns.append(
+                f"""
 Example {i} (similarity: {score:.3f}):
 Source: {source_name}
 ```html
 {chunk}
 ```
-            """)
-        
+            """
+            )
+
         return "\n".join(formatted_patterns)
-    
-    def _get_generation_prompt(self, visual_analysis: Dict[str, Any], pattern_context: str, custom_instructions: str = "") -> str:
+
+    def _get_generation_prompt(
+        self, visual_analysis: dict[str, Any], pattern_context: str, custom_instructions: str = ""
+    ) -> str:
         """Create the code generation prompt"""
-        
+
         components = visual_analysis.get("components", [])
         layout = visual_analysis.get("layout", "modern layout")
         style = visual_analysis.get("style", "clean and modern")
         color_scheme = visual_analysis.get("color_scheme", "neutral colors")
-        
+
         # Build the prompt with custom instructions
         base_prompt = f"""Basándote en este análisis visual:
 - Componentes identificados: {', '.join(components)}
@@ -503,7 +372,9 @@ INSTRUCCIONES ADICIONALES DEL USUARIO:
 {custom_instructions.strip()}"""
 
         # Complete the prompt
-        full_prompt = base_prompt + """
+        full_prompt = (
+            base_prompt
+            + """
 
 Genera código HTML limpio y moderno con Tailwind CSS que implemente el diseño analizado.
 
@@ -532,9 +403,10 @@ ESTRUCTURA ESPERADA:
 IMPORTANTE: Si el usuario proporcionó instrucciones adicionales, asegúrate de incorporarlas en el código generado.
 
 Responde SOLO con el código HTML, sin explicaciones adicionales."""
-        
+        )
+
         return full_prompt
-    
+
     def _clean_generated_code(self, code: str) -> str:
         """Clean up generated code"""
         # Remove markdown code blocks if present
@@ -548,12 +420,12 @@ Responde SOLO con el código HTML, sin explicaciones adicionales."""
             end = code.find("```", start)
             if end != -1:
                 code = code[start:end]
-        
+
         # Basic cleanup
         code = code.strip()
-        
+
         return code
-    
+
     def _get_fallback_html(self) -> str:
         """Get fallback HTML when generation fails"""
         return """<!DOCTYPE html>
@@ -576,74 +448,28 @@ Responde SOLO con el código HTML, sin explicaciones adicionales."""
     </div>
 </body>
 </html>"""
-    
-    def save_generated_code(self, code_result: Dict[str, Any], filename: str = None) -> str:
-        """
-        Save generated code to file
-        
-        Args:
-            code_result: Generated code result
-            filename: Optional filename
-            
-        Returns:
-            Path to saved file
-        """
-        try:
-            # Ensure output directory exists
-            output_dir = generated_code_dir()
-            output_dir.mkdir(parents=True, exist_ok=True)
-            
-            # Generate filename if not provided
-            if filename is None:
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                filename = f"generated_{timestamp}.html"
-            
-            if not filename.endswith('.html'):
-                filename += '.html'
-            
-            # Save HTML file
-            output_path = output_dir / filename
-            with open(output_path, 'w', encoding='utf-8') as f:
-                f.write(code_result.get("html_code", ""))
-            
-            # Save metadata
-            metadata_path = output_path.with_suffix('.json')
-            with open(metadata_path, 'w', encoding='utf-8') as f:
-                json.dump({
-                    "generation_metadata": code_result.get("generation_metadata", {}),
-                    "visual_analysis_summary": code_result.get("visual_analysis_summary", {}),
-                    "html_file": filename,
-                    "created_at": datetime.now().isoformat()
-                }, f, indent=2)
-            
-            return str(output_path)
-            
-        except Exception as e:
-            raise ValueError(f"Failed to save generated code: {str(e)}")
-    
-    def get_rag_status(self) -> Dict[str, Any]:
+
+    def get_rag_status(self) -> dict[str, Any]:
         """Get status of the RAG pipeline"""
         if not self.rag_pipeline:
-            return {
-                "status": "not_initialized",
-                "message": "RAG pipeline is not initialized"
-            }
-        
+            return {"status": "not_initialized", "message": "RAG pipeline is not initialized"}
+
         try:
-            total_docs = len(self.rag_pipeline.docs) if hasattr(self.rag_pipeline, 'docs') else 0
-            total_chunks = sum(len(chunks) for chunks in self.rag_pipeline.chunks_per_doc.values()) if hasattr(self.rag_pipeline, 'chunks_per_doc') else 0
-            
+            total_docs = len(self.rag_pipeline.docs) if hasattr(self.rag_pipeline, "docs") else 0
+            total_chunks = (
+                sum(len(chunks) for chunks in self.rag_pipeline.chunks_per_doc.values())
+                if hasattr(self.rag_pipeline, "chunks_per_doc")
+                else 0
+            )
+
             return {
                 "status": "ready",
                 "total_documents": total_docs,
                 "total_chunks": total_chunks,
                 "vector_search_available": self.rag_pipeline.vec is not None,
                 "bm25_search_available": self.rag_pipeline.bm25 is not None,
-                "examples_directory": str(ui_examples_dir())
+                "examples_directory": str(ui_examples_dir()),
             }
-            
+
         except Exception as e:
-            return {
-                "status": "error",
-                "message": f"Error getting RAG status: {str(e)}"
-            }
+            return {"status": "error", "message": f"Error getting RAG status: {str(e)}"}

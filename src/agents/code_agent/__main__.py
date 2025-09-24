@@ -20,8 +20,7 @@ from a2a.types import (
 )
 from dotenv import load_dotenv
 
-from src.agents.code_a2a_agent.code_a2a_agent import CodeA2AAgent
-from src.agents.code_a2a_agent.code_a2a_agent_executor import CodeA2AAgentExecutor
+from src.agents.code_agent.code_a2a_agent_executor import CodeA2AAgentExecutor
 
 
 @click.command()
@@ -46,8 +45,8 @@ def main(host: str, port: int):
             description="Helps with generating code.",
             url=f"http://{host}:{port}/",
             version="1.0.0",
-            default_input_modes=CodeA2AAgent.SUPPORTED_CONTENT_TYPES,
-            default_output_modes=CodeA2AAgent.SUPPORTED_CONTENT_TYPES,
+            default_input_modes=["text", "text/plain", "application/json"],
+            default_output_modes=["text", "text/plain", "application/json"],
             capabilities=capabilities,
             skills=skills,
         )
