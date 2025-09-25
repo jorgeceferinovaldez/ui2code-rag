@@ -3,7 +3,7 @@
 
 # Variables
 PROJECT_NAME = ui-to-code-system
-PYTHON_INTERPRETER = python3
+PYTHON_INTERPRETER = py
 VENV_NAME = venv
 PORT = 8501
 

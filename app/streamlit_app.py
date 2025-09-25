@@ -3,12 +3,12 @@ Streamlit App for RAG System
 Provides a web interface for RAG queries, corpus management, and system status
 """
 
-# TODO: Adapt agents to A2A framework
-
 import streamlit as st
 import sys
 from pathlib import Path
 import os
+import asyncio
+import nest_asyncio
 from datetime import datetime
 from typing import Optional, Dict, Any
 from PIL import Image
@@ -17,8 +17,17 @@ from PIL import Image
 # Add src to Python path for imports
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
+
+from src.agents import rag_agent
+from src.agents.code_agent.code_agent_mock import CodeAgentMock
 from src.agents.orchestator_agent.utils import save_analysis_result, save_generated_code
 from src.config import corpus_dir, project_dir, temp_images_dir
+
+from src.agents.code_agent.code_rag_agent import CodeAgent
+from src.agents.rag_agent.rag_agent import RAGAgent
+from src.agents.orchestator_agent.orchestator_agent import OrchestratorAgent
+
+nest_asyncio.apply()
 
 
 @st.cache_resource
@@ -226,29 +235,33 @@ def get_system_status(pipeline=None):
 
 
 @st.cache_resource
-def initialize_server_agents():
+def initilize_orchestator_agent() -> OrchestratorAgent:
     """
     Initialize and cache UI-to-Code agents
     """
     try:
-        from src.agents.visual_agent.visual_agent import VisualAgent
-        from src.agents.code_agent.code_rag_agent import CodeAgent
-        from src.agents.rag_agent.rag_agent import RAGAgent
-        from src.agents.orchestator_agent import OrchestratorAgent
+        orchestrator_agent: OrchestratorAgent = OrchestratorAgent()
+        asyncio.run(orchestrator_agent.initialize())
 
-        visual_agent = VisualAgent()
-        code_agent = CodeAgent()
-        rag_agent = RAGAgent()
-        orchestrator_agent = OrchestratorAgent()
-        # TODO: Fix this.
-        # code_agent_proxy = CodeRAGAgentProxy(code_agent)
-        # visual_agent_proxy = VisualAgentProxy(visual_agent)
-
-        return visual_agent, code_agent, rag_agent, orchestrator_agent
+        return orchestrator_agent
 
     except Exception as e:
-        st.error(f"Failed to initialize UI agents: {str(e)}")
-        return None, None, None, None
+        st.error(f"Failed to initilize Orchestrator agent: {str(e)}")
+        return None
+
+
+@st.cache_resource
+def initilize_rag_agent():
+    """
+    Initialize and cache RAG agent
+    """
+    try:
+        rag_agent: RAGAgent = RAGAgent()
+        return rag_agent
+
+    except Exception as e:
+        st.error(f"Failed to initilize RAG agent: {str(e)}")
+        return None
 
 
 def ui_to_code_page():
@@ -257,10 +270,13 @@ def ui_to_code_page():
     st.markdown("Upload a UI design image and convert it to clean HTML/Tailwind CSS code")
 
     # Initialize agents
-    visual_agent, code_agent, rag_agent = initialize_server_agents()
-
-    if not visual_agent or not code_agent or not rag_agent:
-        st.error("UI-to-Code agents are not available. Please check your configuration.")
+    orchestrator_agent = initilize_orchestator_agent()
+    if not orchestrator_agent:
+        st.error("Orchestrator agent is not available. Please check your configuration.")
+        return
+    rag_agent = initilize_rag_agent()
+    if not rag_agent:
+        st.error("RAG agent is not available. Please check your configuration.")
         return
 
     # File upload section
@@ -336,10 +352,11 @@ def ui_to_code_page():
                 status_text.text("Step 1/3: Analyzing UI design...")
                 progress_bar.progress(10)
 
-                img = Image.open(temp_file_path)
-
+                loop = asyncio.get_event_loop()
                 with st.spinner("Analyzing design with AI vision model..."):
-                    analysis_result = visual_agent.invoke(img)
+                    analysis_result = loop.run_until_complete(
+                        orchestrator_agent.send_message_to_visual_agent(temp_file_path)
+                    )
 
                 progress_bar.progress(30)
 
@@ -393,8 +410,13 @@ def ui_to_code_page():
                 status_text.text("Step 3/3: Generating HTML/CSS code...")
                 progress_bar.progress(80)
 
+                loop = asyncio.get_event_loop()
                 with st.spinner("Generating clean HTML/Tailwind CSS code..."):
-                    code_result = code_agent.invoke(patterns, analysis_result, custom_instructions=custom_instructions)
+                    code_result = loop.run_until_complete(
+                        orchestrator_agent.send_message_to_code_agent(
+                            patterns, analysis_result, custom_instructions=custom_instructions
+                        )
+                    )
 
                 progress_bar.progress(100)
                 status_text.text("✅ Code generation complete!")
