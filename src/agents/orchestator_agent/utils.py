@@ -7,7 +7,7 @@ from src.config import temp_images_dir
 from src.config import generated_code_dir
 
 
-def save_analysis_result(self, analysis_result: dict[str, Any], filename: str = None) -> str:
+def save_analysis_result(analysis_result: dict[str, Any], filename: str = None) -> str:
     """
     Save analysis result to temporary directory
 
@@ -41,7 +41,7 @@ def save_analysis_result(self, analysis_result: dict[str, Any], filename: str = 
         raise ValueError(f"Failed to save analysis result: {str(e)}")
 
 
-def save_generated_code(self, code_result: dict[str, Any], filename: str = None) -> str:
+def save_generated_code(code_result: dict[str, Any], filename: str = None) -> str:
     """
     Save generated code to file
 

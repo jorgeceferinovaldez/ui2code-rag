@@ -2,7 +2,7 @@
 
 import json
 from typing import Any
-from loguru import logger
+from src.logging_config import logger
 from PIL import Image
 
 
@@ -10,7 +10,6 @@ class VisualAgentMock:
     SUPPORTED_CONTENT_TYPES = ["text", "text/plain"]
 
     def invoke(self, image: Image) -> dict[str, Any]:
-        logger.info("Visual Agent invoked")
         response_text = """
         {
         "components": [

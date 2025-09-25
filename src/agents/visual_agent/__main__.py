@@ -1,6 +1,6 @@
 """Main entry point for the Visual Agent server."""
 
-from loguru import logger
+from src.logging_config import logger
 import sys
 import click
 import uvicorn
@@ -15,9 +15,8 @@ from src.agents.visual_agent.visual_a2a_agent_executor import VisualA2AAgentExec
 @click.option("--host", "host", default="localhost")
 @click.option("--port", "port", default=10000)
 def main(host: str, port: int):
-    print(f"Starting Visual Agent on {host}:{port}")
+    logger.info(f"Starting Visual Agent server on {host}:{port}")
     try:
-        logger.info(f"Starting Visual Agent on {host}:{port}")
         capabilities = AgentCapabilities()
         skills = [
             AgentSkill(

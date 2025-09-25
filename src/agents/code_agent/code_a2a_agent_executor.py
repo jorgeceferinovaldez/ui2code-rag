@@ -2,11 +2,11 @@
 
 import json
 from typing import Any
-from loguru import logger
+from src.logging_config import logger
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
-from a2a.utils import new_agent_text_message, get_text_parts
-from a2a.types import FileWithBytes, Message, Part
+from a2a.utils import new_agent_text_message
+from a2a.types import FileWithBytes, Part
 
 from src.agents.code_agent.code_agent_mock import CodeAgentMock
 from src.agents.code_agent.code_rag_agent import CodeAgent
@@ -17,14 +17,9 @@ class CodeA2AAgentExecutor(AgentExecutor):
         self.agent = CodeAgent()
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
-        logger.debug("Executing Code Agent")
         analysis_result, patterns, custom_instructions = self._get_content_from_context(context)
-        logger.debug(f"Analysis Result: {analysis_result}")
-        logger.debug(f"Patterns: {patterns}")
-        logger.debug(f"Custom Instructions: {custom_instructions}")
 
         result = self.agent.invoke(patterns, analysis_result, custom_instructions)
-        logger.debug(f"Code Agent result: {result}")
         await event_queue.enqueue_event(new_agent_text_message(json.dumps(result)))
 
     async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
@@ -68,10 +63,7 @@ class CodeA2AAgentExecutor(AgentExecutor):
         custom_instructions = ""
 
         extracted_parts = self._extract_content(message_parts)
-        logger.debug(f"Extracted parts: {extracted_parts}")
-
         for part, metadata, mime_type in extracted_parts:
-            logger.debug(f"Part: {part}, Metadata: {metadata}, MIME Type: {mime_type}")
             if mime_type != "text/plain":
                 raise Exception(f"Unsupported MIME type: {mime_type}")
             if metadata and isinstance(metadata, dict) and "type" in metadata:

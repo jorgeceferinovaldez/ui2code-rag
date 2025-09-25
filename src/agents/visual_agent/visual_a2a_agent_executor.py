@@ -1,10 +1,11 @@
 """Executor for the Visual A2A Agent."""
 
 import json, base64
-from loguru import logger
+from src.logging_config import logger
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.utils import new_agent_text_message, get_file_parts
+from src.agents.visual_agent.visual_agent import VisualAgent
 from src.agents.visual_agent.visual_agent_mock import VisualAgentMock
 from a2a.types import InvalidParamsError, Message
 from PIL import Image
@@ -16,7 +17,7 @@ class VisualA2AAgentExecutor(AgentExecutor):
     """Executor for the Visual A2A Agent."""
 
     def __init__(self):
-        self.agent = VisualAgentMock()
+        self.agent = VisualAgent()
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
         base64_image = self._get_base64_image_from_context(context)

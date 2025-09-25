@@ -3,7 +3,7 @@ Visual Agent for UI Design Analysis
 Analyzes uploaded images of UI designs and extracts structural information
 """
 
-from loguru import logger
+from src.logging_config import logger
 from io import BytesIO
 import os, json, base64, sys
 from typing import Any
