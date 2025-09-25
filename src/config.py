@@ -13,20 +13,20 @@ import os
 def load_config(config_path: str = "config.yaml") -> Dict[str, Any]:
     """
     Load configuration from config.yaml
-    
+
     Args:
         config_path: Relative path to config file from this module
-    
+
     Returns:
         Dictionary containing configuration
-    
+
     Raises:
         FileNotFoundError: If config file doesn't exist
         yaml.YAMLError: If YAML parsing fails
     """
     try:
         abs_config_path = os.path.join(os.path.dirname(__file__), config_path)
-        with open(abs_config_path, 'r', encoding='utf-8') as file:
+        with open(abs_config_path, "r", encoding="utf-8") as file:
             config = yaml.safe_load(file)
         return config
     except FileNotFoundError:
@@ -38,28 +38,30 @@ def load_config(config_path: str = "config.yaml") -> Dict[str, Any]:
 def make_dir_function(dir_name: Union[str, Iterable[str]]) -> Callable[..., Path]:
     """
     Create a directory function using pyprojroot
-    
+
     Args:
         dir_name: Directory name or path components
-    
+
     Returns:
         Function that returns Path object relative to project root
     """
+
     def dir_path(*args) -> Path:
         if isinstance(dir_name, str):
             return here().joinpath(dir_name, *args)
         else:
             return here().joinpath(*dir_name, *args)
+
     return dir_path
 
 
 def ensure_dir_exists(dir_function: Callable[..., Path]) -> Path:
     """
     Create directory if it doesn't exist and return the Path
-    
+
     Args:
         dir_function: Function that returns a Path
-    
+
     Returns:
         Path object of the created/existing directory
     """
@@ -77,69 +79,73 @@ app_dir = make_dir_function("app")
 src_dir = make_dir_function("src")
 
 # Data directories (only existing ones)
-corpus_dir = make_dir_function(config['data']['corpus_dir'])
+corpus_dir = make_dir_function(config["data"]["corpus_dir"])
 
 # RAG directories (existing source code structure)
-rag_ingestion_dir = make_dir_function(config['rag']['ingestion_dir'])
-rag_retrievers_dir = make_dir_function(config['rag']['retrievers_dir'])
-rag_evaluators_dir = make_dir_function(config['rag']['evaluators_dir'])
-rag_core_dir = make_dir_function(config['rag']['core_dir'])
+rag_ingestion_dir = make_dir_function(config["rag"]["ingestion_dir"])
+rag_retrievers_dir = make_dir_function(config["rag"]["retrievers_dir"])
+rag_evaluators_dir = make_dir_function(config["rag"]["evaluators_dir"])
+rag_core_dir = make_dir_function(config["rag"]["core_dir"])
 
 # Application paths
-app_main_file = make_dir_function(config['app']['main_file'])
+app_main_file = make_dir_function(config["app"]["main_file"])
 
 # Source code structure (only existing)
-agents_dir = make_dir_function(config['src']['agents_dir'])
-runtime_dir = make_dir_function(config['src']['runtime_dir'])
+agents_dir = make_dir_function(config["src"]["agents_dir"])
+runtime_dir = make_dir_function(config["src"]["runtime_dir"])
 
 # Development directories (only existing ones)
-docs_dir = make_dir_function(config['development']['docs_dir'])
+docs_dir = make_dir_function(config["development"]["docs_dir"])
 
 # UI-to-Code directories
-ui_examples_dir = make_dir_function(config['ui_to_code']['ui_examples_dir'])
-temp_images_dir = make_dir_function(config['ui_to_code']['temp_images_dir'])
-generated_code_dir = make_dir_function(config['ui_to_code']['generated_code_dir'])
-websight_data_dir = make_dir_function(config['ui_to_code']['websight_data_dir'])
+ui_examples_dir = make_dir_function(config["ui_to_code"]["ui_examples_dir"])
+temp_images_dir = make_dir_function(config["ui_to_code"]["temp_images_dir"])
+generated_code_dir = make_dir_function(config["ui_to_code"]["generated_code_dir"])
+websight_data_dir = make_dir_function(config["ui_to_code"]["websight_data_dir"])
 
 # Configuration files
-requirements_file = make_dir_function(config['files']['requirements_file'])
-requirements_dev_file = make_dir_function(config['files']['requirements_dev_file'])
-setup_file = make_dir_function(config['files']['setup_file'])
-pyproject_file = make_dir_function(config['files']['pyproject_file'])
-config_file = make_dir_function(config['files']['config_file'])
-env_file = make_dir_function(config['files']['env_file'])
-env_example_file = make_dir_function(config['files']['env_example_file'])
-makefile = make_dir_function(config['files']['makefile'])
-readme_file = make_dir_function(config['files']['readme_file'])
-gitignore_file = make_dir_function(config['files']['gitignore_file'])
-check_deps_file = make_dir_function(config['files']['check_deps_file'])
-quick_start_file = make_dir_function(config['files']['quick_start_file'])
-run_streamlit_file = make_dir_function(config['files']['run_streamlit_file'])
+requirements_file = make_dir_function(config["files"]["requirements_file"])
+requirements_dev_file = make_dir_function(config["files"]["requirements_dev_file"])
+setup_file = make_dir_function(config["files"]["setup_file"])
+pyproject_file = make_dir_function(config["files"]["pyproject_file"])
+config_file = make_dir_function(config["files"]["config_file"])
+env_file = make_dir_function(config["files"]["env_file"])
+env_example_file = make_dir_function(config["files"]["env_example_file"])
+makefile = make_dir_function(config["files"]["makefile"])
+readme_file = make_dir_function(config["files"]["readme_file"])
+gitignore_file = make_dir_function(config["files"]["gitignore_file"])
+check_deps_file = make_dir_function(config["files"]["check_deps_file"])
+quick_start_file = make_dir_function(config["files"]["quick_start_file"])
+run_streamlit_file = make_dir_function(config["files"]["run_streamlit_file"])
+
+# Agent service URLs
+visual_agent_url = config["agents_endpoints"]["visual_agent_url"]
+code_agent_url = config["agents_endpoints"]["code_agent_url"]
 
 
 def get_path(key: str, *args) -> Path:
     """
     Get a path by configuration key
-    
+
     Args:
         key: Configuration key in dot notation (e.g., 'data.corpus_dir')
         *args: Additional path components
-    
+
     Returns:
         Path object
-    
+
     Example:
         >>> get_path('ui_to_code.temp_images_dir', 'image.png')
         Path('/path/to/project/data/temp_images/image.png')
     """
-    keys = key.split('.')
+    keys = key.split(".")
     value = config
     for k in keys:
         if k in value:
             value = value[k]
         else:
             raise KeyError(f"Configuration key not found: {key}")
-    
+
     return here().joinpath(value, *args)
 
 
@@ -149,17 +155,16 @@ def create_all_directories() -> None:
         # Core directories
         corpus_dir,
         docs_dir,
-        
         # UI-to-Code data directories
         ui_examples_dir,
         temp_images_dir,
         generated_code_dir,
         websight_data_dir,
     ]
-    
+
     for dir_func in directories_to_create:
         ensure_dir_exists(dir_func)
-    
+
     print("✅ All directories created successfully")
 
 
@@ -170,6 +175,6 @@ if __name__ == "__main__":
     print(f"UI examples dir: {ui_examples_dir()}")
     print(f"Corpus dir: {corpus_dir()}")
     print(f"Docs dir: {docs_dir()}")
-    
+
     # Create all directories
     create_all_directories()
