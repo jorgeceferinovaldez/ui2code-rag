@@ -46,3 +46,8 @@ files:
   check_deps_file: "check_deps.py"
   quick_start_file: "quick_start.py"
   run_streamlit_file: "run_streamlit.py"
+
+# Agent service URLs
+agents_endpoints:
+  visual_agent_url: "http://localhost:10000"
+  code_agent_url: "http://localhost:10001"
