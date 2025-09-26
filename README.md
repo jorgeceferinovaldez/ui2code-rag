@@ -1,24 +1,25 @@
-# Maestría en Inteligencia Artificial FIUBA
+# <div align="center"><b> ⭐ Sistema Multi-Agente UI2Code ⭐ </b><br/>Trabajo Práctico Integrador - Procesamiento de Lenguaje Natural III<br/>Maestría en Inteligencia Artificial (FIUBA)</div>
 
-# Trabajo Práctico Integrador - Procesamiento de Lenguaje Natural III
+<div align="center">✨Datos del proyecto:✨</div>
 
-# Sistema Multi-Agente UI-to-Code
+<p></p>
 
-Un sistema avanzado que convierte diseños de interfaces de usuario en código HTML/Tailwind CSS utilizando IA de visión artificial y tecnología RAG (Retrieval-Augmented Generation). Combina análisis visual inteligente con búsqueda semántica de patrones de código para generar código limpio y moderno.
+<div align="center">
 
----
+| Subtitulo       | UI2Code               |
+| --------------- | ------------------------------------- |
+| **Descrpción**  | UI2Code es un sistema avanzado que convierte diseños de interfaces <br/> de usuario en código  HTML/Tailwind CSS utilizando IA. Combina <br/> análisis visual inteligente con búsqueda semántica de patrones de <br/> código para generar código limpio y moderno.         |
+| **Integrantes** | -Noelia Melina Qualindi (noelia.qualindi@gmail.com)<br/> - Fabricio Denardi (denardifabricio@gmail.com)<br/> - Jorge Ceferino Valdez (jorgecvaldez@gmail.com)<br/> -Bruno Masoller (brunomaso1@gmail.com) |
 
-## Integrantes:
-- Noelia Melina Qualindi.
-- Fabricio Denardi.  
-- Bruno Martin Masoller Gancedo.
-- Jorge Ceferino Valdez.
+</div>
+
 
 ## Inicio Rápido
+<!-- TODO: Actualizar instrucciones de inicio rápido, así como adaptar Makefile (o mejorar con Docker-compose?) -->
 
 ```bash
 # Opción 1: Script automático
-python quick_start.py
+python quick_start.py # TODO: No funciona por ahora.
 
 # Opción 2: Configuración manual
 pip install -e .
@@ -76,17 +77,19 @@ Visita **http://localhost:8501** para acceder a la interfaz web interactiva.
 - **Interfaz Web Streamlit**: Interfaz interactiva multi-página
 - **Configuración Dinámica**: Estructura flexible usando pyprojroot
 - **Integración Pinecone**: Base de datos vectorial escalable para búsqueda semántica
-- **Sistema Multi-Agente**: Agente Visual + Agente de Código trabajando en conjunto
+- **Sistema Multi-Agente A2A**: Agente Visual + Agente de Código trabajando en conjunto
 - **Monitoreo en Tiempo Real**: Dashboard de estado del sistema
 
 ## Arquitectura
 
 El sistema implementa un flujo multi-agente especializado en UI-to-Code:
 
-> **Imagen UI + Instrucciones Usuario → Análisis Visual (Gemini/GPT-Vision) → Búsqueda RAG Híbrida (BM25 + Vector + Cross-Encoder) → Patrones HTML/CSS → Generación Personalizada (DeepSeek/GPT) → Código HTML/Tailwind Customizado**
+> [!NOTE]
+> Imagen UI + Instrucciones Usuario → Análisis Visual (Gemini/GPT-Vision) → Búsqueda RAG Híbrida (BM25 + Vector + Cross-Encoder) → Patrones HTML/CSS → Generación Personalizada (DeepSeek/GPT) → Código HTML/Tailwind Customizado
 
 ## Workflow del sistema
 
+<!-- TODO: Actualizar diagrama de workflow, incluir A2A. -->
 ![Workflowo](./docs/ui-to-code-workflow.png)
 
 ### Flujo de Trabajo
@@ -106,6 +109,8 @@ El sistema implementa un flujo multi-agente especializado en UI-to-Code:
 * **OpenRouter Integration**: Soporte para modelos económicos y de código abierto
 
 ## Estructura del Proyecto
+
+<!-- TODO: Actualizar estructura del proyecto. -->
 
 ```
 ui-to-code-system/
@@ -215,7 +220,16 @@ python -c "from src.config import create_all_directories; create_all_directories
 
 ## Uso
 
-### 1. Interfaz Web Streamlit (Recomendado)
+### 1. Iniciar los agentes
+
+Iniciar los agentes de forma manual:
+
+```bash
+python -m src.agents.visual_agent
+python -m src.agents.code_rag_agent
+```
+
+### 2. Interfaz Web Streamlit (Recomendado)
 
 Iniciar la aplicación web Streamlit:
 
@@ -272,6 +286,7 @@ Monitorea tu sistema RAG a través de:
 
 También puedes usar el sistema RAG programáticamente:
 
+<!-- TODO: Actualizar ejemplo de uso programático. -->
 ```python
 from src.rag.core.rag_pipeline import RagPipeline
 from src.rag.ingestion.pdf_loader import folder_pdfs_to_documents

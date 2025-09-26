@@ -3,7 +3,7 @@
 
 # Variables
 PROJECT_NAME = ui-to-code-system
-PYTHON_INTERPRETER = py
+PYTHON_INTERPRETER = python3
 VENV_NAME = venv
 PORT = 8501
 
@@ -58,6 +58,14 @@ setup-dirs:
 check-config:
 	@echo "Checking project configuration..."
 	$(PYTHON_INTERPRETER) -c "from src.config import project_dir, corpus_dir, config; print(f'✅ Project root: {project_dir()}'); print(f'✅ Corpus dir: {corpus_dir()}'); print('✅ Configuration loaded successfully')"
+
+run-visual-agent:
+	@echo "Running Visual Agent..."
+	$(PYTHON_INTERPRETER) -m src.agents.visual_agent
+
+run-code-agent:
+	@echo "Running Code Agent..."
+	$(PYTHON_INTERPRETER) -m src.agents.code_agent
 
 ## Run Streamlit web app
 run-server:
@@ -154,7 +162,11 @@ quick-start:
 	@echo "   cp .env.example .env"
 	@echo "   # Edit .env with your OpenRouter/OpenAI API keys"
 	@echo ""
-	@echo "6. Start the UI-to-Code system:"
+	@echo "6. Start the visual and code agents in separate terminals:"
+	@echo "   make run-visual-agent"
+	@echo "   make run-code-agent"
+	@echo ""
+	@echo "7. Start the UI-to-Code system:"
 	@echo "   make run-server"
 	@echo ""
 	@echo "Visit http://localhost:8501 for the UI-to-Code interface"
