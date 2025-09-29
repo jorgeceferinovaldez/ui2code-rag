@@ -10,6 +10,9 @@ from PIL import Image
 from io import BytesIO
 from a2a.types import Message
 
+# Custom dependencies
+from .visual_agent_with_guardrails import VisualAgentWithGuardrails
+from .visual_agent_mock import VisualAgentMock
 from .visual_agent import VisualAgent
 
 
@@ -17,6 +20,7 @@ class VisualA2AAgentExecutor(AgentExecutor):
     """Executor for the Visual A2A Agent."""
 
     def __init__(self):
+        # self.agent = VisualAgentWithGuardrails(VisualAgent())
         self.agent = VisualAgent()
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:

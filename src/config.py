@@ -3,6 +3,7 @@ Dynamic Path Configuration System for UI-to-Code Multi-Agent System
 Based on pyprojroot and YAML configuration for flexible project structure management
 """
 
+from loguru import logger
 import yaml
 from pyprojroot import here
 from pathlib import Path
@@ -70,6 +71,8 @@ def ensure_dir_exists(dir_function: Callable[..., Path]) -> Path:
     return path
 
 
+logger.info("Loading configuration from config.yaml")
+
 # Load configuration
 config = load_config()
 
@@ -121,6 +124,8 @@ run_streamlit_file = make_dir_function(config["files"]["run_streamlit_file"])
 # Agent service URLs
 visual_agent_url = config["agents_endpoints"]["visual_agent_url"]
 code_agent_url = config["agents_endpoints"]["code_agent_url"]
+
+logger.info("Configuration loaded successfully")
 
 
 def get_path(key: str, *args) -> Path:

@@ -1,11 +1,10 @@
 """Orchestrator Agent that coordinates between Visual and Code Agents, and integrates RAG for context."""
-
+from loguru import logger
 import base64, json, httpx
 from pathlib import Path
 from PIL import Image
 from typing import Any
 from uuid import uuid4
-from src.logging_config import logger
 from a2a.client import A2ACardResolver, A2AClient
 from a2a.types import (
     AgentCard,
@@ -24,9 +23,9 @@ CODE_AGENT_URL = code_agent_url
 
 
 class OrchestratorAgent:
-    def __init__(self):
-        self.visual_url: str = VISUAL_AGENT_URL
-        self.code_url: str = CODE_AGENT_URL
+    def __init__(self, visual_url: str = VISUAL_AGENT_URL, code_url: str = CODE_AGENT_URL) -> None:
+        self.visual_url: str = visual_url
+        self.code_url: str = code_url
         self.rag_agent: RAGAgent = RAGAgent()
         self.httpx_client: httpx.AsyncClient | None = None
 
@@ -39,6 +38,7 @@ class OrchestratorAgent:
 
     async def initialize(self) -> None:
         """Inicializa el cliente HTTP y obtiene las cards de ambos agentes."""
+        logger.info("Initializing HTTP client")
         timeout = httpx.Timeout(60.0, connect=10.0)
         self.httpx_client = httpx.AsyncClient(timeout=timeout)
 
@@ -210,8 +210,10 @@ class OrchestratorAgent:
         else:
             raise RuntimeError("Invalid response from Code Agent")
 
+    @staticmethod
     async def test_process() -> None:
         """Función de prueba para enviar mensajes a ambos agentes y procesar las respuestas."""
+        logger.info("Starting Orchestrator Agent test process")
         orchestrator = OrchestratorAgent(
             visual_url=VISUAL_AGENT_URL,
             code_url=CODE_AGENT_URL,
@@ -283,3 +285,9 @@ class OrchestratorAgent:
         logger.info(f"Code Agent result: {code_result}")
 
         await orchestrator.close()
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    asyncio.run(OrchestratorAgent.test_process())

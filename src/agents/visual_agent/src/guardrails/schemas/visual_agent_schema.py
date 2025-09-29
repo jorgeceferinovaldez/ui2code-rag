@@ -1,0 +1,34 @@
+OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "components": {"type": "array", "items": {"type": "string"}},
+        "layout": {"type": "string"},
+        "style": {"type": "string"},
+        "analysis_text": {"type": "string"},
+        "raw_response": {"type": "string"},
+        "image_metadata": {
+            "type": "object",
+            "properties": {
+                "image_path": {"type": "string"},
+                "dimensions": {"type": "object"},
+                "dominant_colors": {"type": "array", "items": {}},
+                "layout_hints": {"type": "object"},
+                "file_size": {"type": "integer"},
+                "format": {"type": "string"},
+            },
+            "required": ["image_path", "dimensions", "dominant_colors", "layout_hints", "file_size", "format"],
+        },
+        "model_used": {"type": "string"},
+        "analysis_timestamp": {"type": ["string", "null"]},
+    },
+    "required": [
+        "components",
+        "layout",
+        "style",
+        "analysis_text",
+        "raw_response",
+        "image_metadata",
+        "model_used",
+        "analysis_timestamp",
+    ],
+}

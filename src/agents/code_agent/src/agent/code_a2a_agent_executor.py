@@ -8,11 +8,14 @@ from a2a.utils import new_agent_text_message
 from a2a.types import FileWithBytes, Part
 
 # Custom dependencies
+from .code_agent_mock import CodeAgentMock
+from .code_agent_with_guardrails import CodeAgentWithGuardrails
 from .code_agent import CodeAgent
 
 
 class CodeA2AAgentExecutor(AgentExecutor):
     def __init__(self):
+        # self.agent = CodeAgentWithGuardrails(CodeAgent())
         self.agent = CodeAgent()
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
