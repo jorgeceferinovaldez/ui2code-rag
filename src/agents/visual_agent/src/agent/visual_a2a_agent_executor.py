@@ -1,16 +1,16 @@
 """Executor for the Visual A2A Agent."""
 
 import json, base64
-from src.logging_config import logger
+from loguru import logger
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.utils import new_agent_text_message, get_file_parts
-from src.agents.visual_agent.visual_agent import VisualAgent
-from src.agents.visual_agent.visual_agent_mock import VisualAgentMock
 from a2a.types import InvalidParamsError, Message
 from PIL import Image
 from io import BytesIO
 from a2a.types import Message
+
+from src.agent.visual_agent import VisualAgent
 
 
 class VisualA2AAgentExecutor(AgentExecutor):
@@ -24,7 +24,7 @@ class VisualA2AAgentExecutor(AgentExecutor):
         if not base64_image:
             raise InvalidParamsError("No image found in message parts")
 
-        image: Image = self._load_image_from_base64(base64_image)
+        image = self._load_image_from_base64(base64_image)
         if image is None:
             raise InvalidParamsError("Failed to load image from base64 data")
 
@@ -37,25 +37,7 @@ class VisualA2AAgentExecutor(AgentExecutor):
         raise Exception("cancel not supported")
 
     def _get_base64_image_from_context(self, context: RequestContext) -> str:
-        """
-        Extract base64-encoded image data from a request context message.
-        This method searches through the file parts of a message within the provided
-        context to find and return the first image file (PNG or JPEG format) as
-        base64-encoded bytes.
-        Args:
-            context (RequestContext): The request context containing the message
-                                    with potential file parts.
-        Returns:
-            str: Base64-encoded image data from the first image file found.
-        Raises:
-            Exception: If no message is found in the context.
-            Exception: If no file parts are found in the message.
-            Exception: If no image files (PNG/JPEG) are found in the message parts.
-        Note:
-            This method only processes images with MIME types: image/png, image/jpeg,
-            or image/jpg. Other file types are ignored.
-        """
-
+        """Extract base64-encoded image data from a request context message."""
         message: Message = context.message
         if not message:
             raise Exception("No message found in context")
@@ -71,23 +53,7 @@ class VisualA2AAgentExecutor(AgentExecutor):
         raise Exception("No image found in message parts")
 
     def _load_image_from_base64(self, base64_image: str) -> Image:
-        """
-        Load an image from a base64 encoded string.
-        This method decodes a base64 string, converts it to an image object,
-        and ensures the image is in RGB format.
-        Args:
-            base64_image (str): Base64 encoded image data as a string.
-        Returns:
-            Image: PIL Image object in RGB format.
-        Raises:
-            InvalidParamsError: If the base64 data cannot be decoded or converted
-                               to a valid image format.
-        Example:
-            >>> base64_str = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
-            >>> image = self._load_image_from_base64(base64_str)
-            >>> isinstance(image, Image.Image)
-            True
-        """
+        """Load an image from a base64 encoded string."""
         try:
             image_data = base64.b64decode(base64_image)
             image = Image.open(BytesIO(image_data))

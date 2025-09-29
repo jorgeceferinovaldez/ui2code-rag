@@ -2,7 +2,6 @@
 
 import json
 from typing import Any
-from src.logging_config import logger
 from PIL import Image
 
 

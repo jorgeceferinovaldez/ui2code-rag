@@ -1,6 +1,4 @@
-"""Main entry point for the Visual Agent server."""
-
-from src.logging_config import logger
+from loguru import logger
 import sys
 import click
 import uvicorn
@@ -8,7 +6,13 @@ from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentCapabilities, AgentCard, AgentSkill
-from src.agents.visual_agent.visual_a2a_agent_executor import VisualA2AAgentExecutor
+
+# Custom dependencies
+from src.agent.visual_a2a_agent_executor import VisualA2AAgentExecutor
+from src.config import settings
+
+HOST = settings.host
+PORT = settings.port
 
 
 @click.command()
