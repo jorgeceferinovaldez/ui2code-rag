@@ -6,6 +6,8 @@ import textwrap
 from typing import Any
 from datetime import datetime
 import openai
+
+# Custom dependencies
 from src.config import settings
 from src.texts.prompts import SYSTEM_PROMPT, GENERATION_PROMPT_TEMPLATE
 from src.texts.html_examples import write_examples, FALLBACK_HTML
@@ -26,17 +28,13 @@ class CodeAgent:
             raise ValueError("No API key found for available providers. Please set one in the environment.")
         if OPENROUTER_API_KEY:
             self.client = openai.OpenAI(base_url=OPENROUTER_BASE_URL, api_key=OPENROUTER_API_KEY)
-            self.code_model = CODE_MODEL
+            self.model = CODE_MODEL
             self.use_openrouter = True
         else:
             if OPENAI_KEY:
                 self.client = openai.OpenAI(api_key=OPENAI_KEY)
-                self.code_model = OPENAI_MODEL
+                self.model = OPENAI_MODEL
                 self.use_openrouter = False
-
-    def create_sample_examples(self, examples_dir):
-        """Escribir ejemplos HTML/CSS de referencia"""
-        write_examples(examples_dir)
 
     def invoke(
         self, patterns: list[tuple], visual_analysis: dict[str, Any], custom_instructions: str = ""
@@ -47,7 +45,7 @@ class CodeAgent:
             prompt = self._get_generation_prompt(visual_analysis, pattern_context, custom_instructions)
 
             response = self.client.chat.completions.create(
-                model=self.code_model,
+                model=self.model,
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": prompt},
@@ -62,7 +60,7 @@ class CodeAgent:
             return {
                 "html_code": cleaned_code,
                 "generation_metadata": {
-                    "model_used": self.code_model,
+                    "model_used": self.model,
                     "patterns_used": len(patterns),
                     "visual_components": visual_analysis.get("components", []),
                     "custom_instructions": custom_instructions.strip() if custom_instructions else "",
@@ -80,12 +78,16 @@ class CodeAgent:
                 "error": f"Code generation failed: {str(e)}",
                 "html_code": self._get_fallback_html(),
                 "generation_metadata": {
-                    "model_used": self.code_model,
+                    "model_used": self.model,
                     "custom_instructions": custom_instructions.strip() if custom_instructions else "",
                     "error": str(e),
                     "timestamp": datetime.now().isoformat(),
                 },
             }
+
+    def create_sample_examples(self, examples_dir):
+        """Escribir ejemplos HTML/CSS de referencia"""
+        write_examples(examples_dir)
 
     def _format_patterns_for_generation(self, patterns: list[tuple]) -> str:
         """Format retrieved patterns for inclusion in the generation prompt"""
