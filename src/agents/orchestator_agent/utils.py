@@ -5,6 +5,7 @@ import json
 from typing import Any
 from src.config import temp_images_dir
 from src.config import generated_code_dir
+from src.config import project_dir, ui_examples_dir
 
 
 def save_analysis_result(analysis_result: dict[str, Any], filename: str = None) -> str:
@@ -88,3 +89,28 @@ def save_generated_code(code_result: dict[str, Any], filename: str = None) -> st
 
     except Exception as e:
         raise ValueError(f"Failed to save generated code: {str(e)}")
+
+def get_rag_status(self) -> dict[str, Any]:
+        """Get status of the RAG pipeline"""
+        if not self.rag_pipeline:
+            return {"status": "not_initialized", "message": "RAG pipeline is not initialized"}
+
+        try:
+            total_docs = len(self.rag_pipeline.docs) if hasattr(self.rag_pipeline, "docs") else 0
+            total_chunks = (
+                sum(len(chunks) for chunks in self.rag_pipeline.chunks_per_doc.values())
+                if hasattr(self.rag_pipeline, "chunks_per_doc")
+                else 0
+            )
+
+            return {
+                "status": "ready",
+                "total_documents": total_docs,
+                "total_chunks": total_chunks,
+                "vector_search_available": self.rag_pipeline.vec is not None,
+                "bm25_search_available": self.rag_pipeline.bm25 is not None,
+                "examples_directory": str(ui_examples_dir()),
+            }
+
+        except Exception as e:
+            return {"status": "error", "message": f"Error getting RAG status: {str(e)}"}
