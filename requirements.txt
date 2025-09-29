@@ -7,6 +7,7 @@ pandas>=2.0.0
 python-dotenv>=1.0.0
 pyyaml>=6.0.0
 pyprojroot>=0.3.0
+pyparsing>=3.2.0
 
 # Web framework and UI
 streamlit>=1.28.0
