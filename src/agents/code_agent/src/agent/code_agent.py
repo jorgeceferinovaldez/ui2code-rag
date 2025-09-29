@@ -8,9 +8,9 @@ from datetime import datetime
 import openai
 
 # Custom dependencies
-from src.config import settings
-from src.texts.prompts import SYSTEM_PROMPT, GENERATION_PROMPT_TEMPLATE
-from src.texts.html_examples import write_examples, FALLBACK_HTML
+from ..config import settings
+from ..texts.prompts import SYSTEM_PROMPT, GENERATION_PROMPT_TEMPLATE
+from ..texts.html_examples import write_examples, FALLBACK_HTML
 
 
 OPENROUTER_API_KEY = settings.openrouter_api_key

@@ -11,9 +11,9 @@ import cv2
 import numpy as np
 
 # Custom dependencies
-from src.config import settings
-from src.texts.prompts import ANALYSIS_PROMPT
-from src.texts.types import COMMON_COMPONENTS
+from ..config import settings
+from ..texts.prompts import ANALYSIS_PROMPT
+from ..texts.types import COMMON_COMPONENTS
 
 OPENROUTER_API_KEY = settings.openrouter_api_key
 OPENROUTER_BASE_URL = settings.openrouter_base_url

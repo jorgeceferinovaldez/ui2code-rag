@@ -10,7 +10,7 @@ from PIL import Image
 from io import BytesIO
 from a2a.types import Message
 
-from src.agent.visual_agent import VisualAgent
+from .visual_agent import VisualAgent
 
 
 class VisualA2AAgentExecutor(AgentExecutor):

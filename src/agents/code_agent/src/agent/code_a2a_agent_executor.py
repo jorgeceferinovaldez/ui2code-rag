@@ -8,7 +8,7 @@ from a2a.utils import new_agent_text_message
 from a2a.types import FileWithBytes, Part
 
 # Custom dependencies
-from src.agent.code_agent import CodeAgent
+from .code_agent import CodeAgent
 
 
 class CodeA2AAgentExecutor(AgentExecutor):

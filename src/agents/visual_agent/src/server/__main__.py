@@ -8,8 +8,8 @@ from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentCapabilities, AgentCard, AgentSkill
 
 # Custom dependencies
-from src.agent.visual_a2a_agent_executor import VisualA2AAgentExecutor
-from src.config import settings
+from ..agent.visual_a2a_agent_executor import VisualA2AAgentExecutor
+from ..config import settings
 
 HOST = settings.host
 PORT = settings.port

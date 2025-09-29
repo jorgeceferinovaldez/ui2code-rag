@@ -3,7 +3,11 @@
 
 # Variables
 PROJECT_NAME = ui-to-code-system
-PYTHON_INTERPRETER = python3
+ifeq ($(OS),Windows_NT)
+    PYTHON_INTERPRETER = py -3
+else
+    PYTHON_INTERPRETER = python3
+endif
 VENV_NAME = venv
 PORT = 8501
 
@@ -61,11 +65,11 @@ check-config:
 
 run-visual-agent:
 	@echo "Running Visual Agent..."
-	$(PYTHON_INTERPRETER) -m src.agents.visual_agent
+	$(PYTHON_INTERPRETER) -m src.agents.visual_agent.src.server
 
 run-code-agent:
 	@echo "Running Code Agent..."
-	$(PYTHON_INTERPRETER) -m src.agents.code_agent
+	$(PYTHON_INTERPRETER) -m src.agen1ts.code_agent.src.server
 
 ## Run Streamlit web app
 run-server:
@@ -184,5 +188,3 @@ verify-env:
 	$(PYTHON_INTERPRETER) -c "import sys; print(f'Python executable: {sys.executable}')"
 	@echo "Current directory: $(PWD)"
 	@echo "Environment verification completed"
-
-# TODO: Add A2A servers and other advanced features
