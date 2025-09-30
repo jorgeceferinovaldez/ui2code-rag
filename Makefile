@@ -4,7 +4,7 @@
 # Variables
 PROJECT_NAME = ui-to-code-system
 ifeq ($(OS),Windows_NT)
-    PYTHON_INTERPRETER = py -3
+    PYTHON_INTERPRETER = py
 else
     PYTHON_INTERPRETER = python3
 endif
