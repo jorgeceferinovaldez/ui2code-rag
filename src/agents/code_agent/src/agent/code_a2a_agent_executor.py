@@ -2,54 +2,36 @@
 
 import json
 from typing import Any
-from src.logging_config import logger
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.utils import new_agent_text_message
 from a2a.types import FileWithBytes, Part
+from loguru import logger
 
-from src.agents.code_agent.code_agent_mock import CodeAgentMock
-from src.agents.code_agent.code_rag_agent import CodeAgent
+# Custom dependencies
+from .code_agent_mock import CodeAgentMock
+from .code_agent_with_guardrails import CodeAgentWithGuardrails
+from .code_agent import CodeAgent
 
 
 class CodeA2AAgentExecutor(AgentExecutor):
     def __init__(self):
-        self.agent = CodeAgent()
+        # self.agent = CodeAgentWithGuardrails(CodeAgentMock())
+        self.agent = CodeAgentWithGuardrails(CodeAgent())
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
+        logger.debug("Executing Code Agent")
         analysis_result, patterns, custom_instructions = self._get_content_from_context(context)
 
         result = self.agent.invoke(patterns, analysis_result, custom_instructions)
+        logger.success(f"Agent execution result: {result}")
         await event_queue.enqueue_event(new_agent_text_message(json.dumps(result)))
 
     async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
-        logger.debug("Canceling Code Agent")
         raise Exception("cancel not supported")
 
     def _get_content_from_context(self, context: RequestContext) -> tuple[dict[str, Any] | None, list[tuple], str]:
-        """Extract and parse content from the request context message parts.
-        This method processes message parts from the context to extract analysis results,
-        patterns, and custom instructions. It validates the content format and parses
-        JSON data where applicable.
-        Args:
-            context (RequestContext): The request context containing the message with parts to process.
-        Returns:
-            tuple[dict[str, Any] | None, list[tuple], str]: A tuple containing:
-                - analysis_result: Parsed JSON analysis result or None if not found
-                - patterns: List of tuples containing pattern data
-                - custom_instructions: String containing custom instructions
-        Raises:
-            Exception: If no message is found in context
-            Exception: If no parts are found in message
-            Exception: If unsupported MIME type is encountered (only text/plain is supported)
-            Exception: If JSON decoding fails for analysis_result or patterns
-        Note:
-            The method expects message parts with specific metadata types:
-            - "analysis_result": JSON-encoded analysis data
-            - "patterns": JSON-encoded list of tuples
-            - "custom_instructions": Plain text instructions
-        """
-
+        """Extract analysis_result, patterns, and custom_instructions from the context message parts"""
         message = context.message
         if not message:
             raise Exception("No message found in context")
@@ -86,27 +68,7 @@ class CodeA2AAgentExecutor(AgentExecutor):
         self,
         message_parts: list[Part],
     ) -> list[tuple[str | dict[str, Any], str]]:
-        """
-        Extract and process content from message parts into a standardized format.
-        This method processes a list of Part objects and converts them into tuples containing
-        the content, metadata, and MIME type. It handles different types of parts including
-        text, files, and data objects.
-        Args:
-            message_parts (list[Part]): List of Part objects to extract content from.
-                Each Part should have a 'root' attribute with 'kind', 'text', 'file',
-                'data', and 'metadata' properties.
-        Returns:
-            list[tuple[str | dict[str, Any], str]]: List of tuples where each tuple contains:
-                - Content (str or dict): The extracted content (text, file bytes/URI, or JSON data)
-                - Metadata (str or None): Associated metadata from the part
-                - MIME type (str): Content type ("text/plain", "application/json", "form", or file MIME type)
-        Note:
-            - For text parts: Returns (text_content, metadata, "text/plain")
-            - For file parts: Returns (bytes_or_uri, metadata, mime_type)
-            - For data parts: Returns (json_string_or_dict, metadata, "application/json" or "form")
-            - If JSON serialization fails for data parts, returns ("<data>", "text/plain")
-            - Returns empty list if message_parts is None or empty
-        """
+        """Extract text, file, and data parts from message parts"""
         parts: list[tuple[str | dict[str, Any], str]] = []
         if not message_parts:
             return []

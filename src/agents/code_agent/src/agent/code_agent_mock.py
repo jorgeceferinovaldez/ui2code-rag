@@ -1,4 +1,4 @@
-"""Mock implementation of the Code Agent for testing purposes."""
+"""Mock implementation of the Code Agent for mocking purposes."""
 
 from datetime import datetime
 from typing import Any

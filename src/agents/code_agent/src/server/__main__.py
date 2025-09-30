@@ -1,27 +1,26 @@
 import sys
-
+from loguru import logger
 import click
 import uvicorn
-
 from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
-from a2a.server.tasks import (
-    InMemoryTaskStore,
-)
-from a2a.types import (
-    AgentCapabilities,
-    AgentCard,
-    AgentSkill,
-)
+from a2a.server.tasks import InMemoryTaskStore
+from a2a.types import AgentCapabilities, AgentCard, AgentSkill
 
-from src.agents.code_agent.code_a2a_agent_executor import CodeA2AAgentExecutor
+# Custom dependencies
+from ..agent.code_a2a_agent_executor import CodeA2AAgentExecutor
+from ..config import settings
+
+HOST = settings.host
+PORT = settings.port
 
 
 @click.command()
-@click.option("--host", "host", default="localhost")
-@click.option("--port", "port", default=10001)
+@click.option("--host", "host", default=HOST)
+@click.option("--port", "port", default=PORT)
 def main(host: str, port: int):
-    print(f"Starting Code Agent on {host}:{port}")
+    """Main entry point to start the Code Agent server."""
+    logger.info(f"Starting Code Agent server on {host}:{port}")
     try:
         capabilities = AgentCapabilities()
         skills = [

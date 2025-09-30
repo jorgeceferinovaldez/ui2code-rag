@@ -19,11 +19,8 @@ sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 
 from src.agents import rag_agent
-from src.agents.code_agent.code_agent_mock import CodeAgentMock
 from src.agents.orchestator_agent.utils import save_analysis_result, save_generated_code
 from src.config import corpus_dir, project_dir, temp_images_dir
-
-from src.agents.code_agent.code_rag_agent import CodeAgent
 from src.agents.rag_agent.rag_agent import RAGAgent
 from src.agents.orchestator_agent.orchestator_agent import OrchestratorAgent
 
