@@ -13,16 +13,7 @@ from guardrails.validators import (
 
 @register_validator(name="guardrails/valid_schema_json", data_type=["string", "object", "list"])
 class ValidSchemaJson(Validator):
-    """Validates that a value is parseable as valid JSON.
-
-    **Key Properties**
-
-    | Property                      | Description                       |
-    | ----------------------------- | --------------------------------- |
-    | Name for `format` attribute   | `guardrails/valid_json`           |
-    | Supported data types          | `string`, `list`, `object`        |
-    | Programmatic fix              | None                              |
-    """  # noqa
+    """Validator that checks if a value is valid JSON and optionally validates it against a provided JSON schema."""
 
     def __init__(self, json_schema: Dict = None, **kwargs):
         super().__init__(**kwargs)

@@ -20,10 +20,11 @@ class VisualA2AAgentExecutor(AgentExecutor):
     """Executor for the Visual A2A Agent."""
 
     def __init__(self):
-        # self.agent = VisualAgentWithGuardrails(VisualAgent())
-        self.agent = VisualAgent()
+        # self.agent = VisualAgentWithGuardrails(VisualAgentMock())
+        self.agent = VisualAgentWithGuardrails(VisualAgent())
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
+        logger.debug("Executing Visual Agent")
         base64_image = self._get_base64_image_from_context(context)
         if not base64_image:
             raise InvalidParamsError("No image found in message parts")
@@ -33,6 +34,7 @@ class VisualA2AAgentExecutor(AgentExecutor):
             raise InvalidParamsError("Failed to load image from base64 data")
 
         result = self.agent.invoke(image)
+        logger.success(f"Visual Agent result: {result}")
         # TODO: Change to structured message with data part
         await event_queue.enqueue_event(new_agent_text_message(json.dumps(result, indent=2)))
 

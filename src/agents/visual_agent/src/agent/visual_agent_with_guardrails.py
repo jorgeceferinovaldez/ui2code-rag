@@ -16,7 +16,7 @@ class VisualAgentWithGuardrails:
     output_schema = OUTPUT_SCHEMA
 
     def __init__(self, agent: VisualAgent):
-        logger.info("Inicializando VisualAgentWithGuardrails")
+        logger.debug("Inicializando VisualAgentWithGuardrails")
         self.agent = agent
 
         self.output_guard = Guard.for_string(
@@ -27,12 +27,13 @@ class VisualAgentWithGuardrails:
         )
 
     def invoke(self, image: Image):
-        logger.info(f"Llamada a invoke con imagen de tamaño {image.size}")
+        logger.debug(f"Llamada a invoke con imagen de tamaño {image.size}")
         result = self.agent.invoke(image)
 
         try:
+            logger.debug(f"Resultado sin validar: {result}")
             validated_output = self.output_guard.parse(json.dumps(result))
-            logger.info(f"Resultado validado: {validated_output}")
+            logger.debug(f"Resultado validado: {validated_output}")
         except Exception as e:
             logger.error(f"Error during output validation: {e}")
             validated_output = None

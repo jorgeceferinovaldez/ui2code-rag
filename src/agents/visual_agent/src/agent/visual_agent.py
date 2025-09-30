@@ -110,7 +110,6 @@ class VisualAgent:
                     "layout": "unknown",
                     "style": "modern",
                     "analysis_text": analysis_text,
-                    "raw_response": analysis_text,
                 }
 
             # Combine with metadata
@@ -147,7 +146,7 @@ class VisualAgent:
                 "dominant_colors": dominant_colors,
                 "layout_hints": layout_info,
                 "file_size": memory_size,
-                "format": image.format,
+                "format": image.format or "unknown",
             }
 
         except Exception as e:

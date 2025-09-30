@@ -16,7 +16,7 @@ class CodeAgentWithGuardrails:
     output_schema = OUTPUT_SCHEMA
 
     def __init__(self, agent: CodeAgent):
-        logger.info("Inicializando CodeAgentWithGuardrails")
+        logger.debug("Inicializando CodeAgentWithGuardrails")
         self.agent = agent
 
         self.output_guard = Guard.for_string(
@@ -30,13 +30,15 @@ class CodeAgentWithGuardrails:
         self.sanitization_guard = Guard().use(WebSanitization, on_fail="exception")
 
     def invoke(self, patterns, visual_analysis, custom_instructions=""):
-        logger.info(
+        logger.debug(
             f"Llamada a invoke con patterns={patterns}, visual_analysis={visual_analysis}, custom_instructions={custom_instructions}"
         )
         result = self.agent.invoke(patterns, visual_analysis, custom_instructions)
 
         try:
+            logger.debug(f"Resultado sin validar: {result}")
             validated_output = self.output_guard.parse(json.dumps(result))
+            logger.debug(f"Resultado validado: {validated_output}")
         except Exception as e:
             logger.error(f"Error during output validation: {e}")
             validated_output = None

@@ -6,6 +6,7 @@ from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.utils import new_agent_text_message
 from a2a.types import FileWithBytes, Part
+from loguru import logger
 
 # Custom dependencies
 from .code_agent_mock import CodeAgentMock
@@ -15,13 +16,15 @@ from .code_agent import CodeAgent
 
 class CodeA2AAgentExecutor(AgentExecutor):
     def __init__(self):
-        # self.agent = CodeAgentWithGuardrails(CodeAgent())
-        self.agent = CodeAgent()
+        # self.agent = CodeAgentWithGuardrails(CodeAgentMock())
+        self.agent = CodeAgentWithGuardrails(CodeAgent())
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
+        logger.debug("Executing Code Agent")
         analysis_result, patterns, custom_instructions = self._get_content_from_context(context)
 
         result = self.agent.invoke(patterns, analysis_result, custom_instructions)
+        logger.success(f"Agent execution result: {result}")
         await event_queue.enqueue_event(new_agent_text_message(json.dumps(result)))
 
     async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:

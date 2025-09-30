@@ -50,7 +50,7 @@ class VisualAgentMock:
             "complexity": "unknown"
             },
             "file_size": 786300,
-            "format": null
+            "format": "JPEG"
         },
         "model_used": "x-ai/grok-4-fast:free",
         "analysis_timestamp": null

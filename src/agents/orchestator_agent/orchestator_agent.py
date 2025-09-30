@@ -1,4 +1,5 @@
 """Orchestrator Agent that coordinates between Visual and Code Agents, and integrates RAG for context."""
+
 from loguru import logger
 import base64, json, httpx
 from pathlib import Path
@@ -121,15 +122,18 @@ class OrchestratorAgent:
             >>> is_valid = _validate_response(response)
             >>> print(is_valid)  # True if valid
         """
-
-        if not response or not response.root or not response.root.result:
-            raise ValueError("Invalid response structure")
-        if not isinstance(response.root, SendMessageSuccessResponse):
-            raise ValueError(f"Non-success response: {response.root}")
-        if not isinstance(response.root.result, Message):
-            raise ValueError(f"Non-message result: {response.root.result}")
-        if not response.root.result.parts:
-            raise ValueError("No parts in message result")
+        try:
+            if not response or not response.root:
+                raise ValueError("Invalid response structure")
+            if not isinstance(response.root, SendMessageSuccessResponse):
+                raise ValueError(f"Non-success response: {response.root}")
+            if not isinstance(response.root.result, Message):
+                raise ValueError(f"Non-message result: {response.root.result}")
+            if not response.root.result.parts:
+                raise ValueError("No parts in message result")
+        except Exception as e:
+            logger.error(f"Response validation error: {e}", exc_info=True)
+            raise RuntimeError("Response validation failed") from e
         return True
 
     async def _send_message_to_agent(
