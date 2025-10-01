@@ -105,6 +105,7 @@ ui_examples_dir = make_dir_function(config["ui_to_code"]["ui_examples_dir"])
 temp_images_dir = make_dir_function(config["ui_to_code"]["temp_images_dir"])
 generated_code_dir = make_dir_function(config["ui_to_code"]["generated_code_dir"])
 websight_data_dir = make_dir_function(config["ui_to_code"]["websight_data_dir"])
+websight_data_file_name = config["ui_to_code"]["websight_data_file_name"]
 
 # Configuration files
 requirements_file = make_dir_function(config["files"]["requirements_file"])

@@ -6,10 +6,17 @@ PROJECT_NAME = ui-to-code-system
 ifeq ($(OS),Windows_NT)
     PYTHON_INTERPRETER = py
 else
-    PYTHON_INTERPRETER = python3
+    PYTHON_INTERPRETER = /opt/anaconda3/envs/uicode312/bin/python
 endif
 VENV_NAME = venv
 PORT = 8501
+
+WEBSIGHT_OFFSET = 0
+WEBSIGHT_LENGTH = 1000
+WEBSIGHT_STEPS=100
+
+WEBSIGHT_LOADER_PATH = src/rag/ingestion/websight_loader.py
+WEBSIGHT_MAX_EXAMPLES = 15
 
 ## Display help information
 help:
@@ -47,6 +54,26 @@ install:
 	$(PYTHON_INTERPRETER) -m pip install --upgrade pip setuptools wheel
 	$(PYTHON_INTERPRETER) -m pip install -e .
 
+## Download a subset of the WebSight dataset for testing
+download-websight:
+	@echo "Descargando WebSight dataset en pasos de $(WEBSIGHT_STEPS) desde $(WEBSIGHT_OFFSET) hasta $(WEBSIGHT_LENGTH)..."
+	mkdir -p data/websight
+	@for step in $(shell seq $(WEBSIGHT_OFFSET) $(WEBSIGHT_STEPS) $(WEBSIGHT_LENGTH)); do \
+		echo "Descargando offset $$step..."; \
+		curl -X GET "https://datasets-server.huggingface.co/rows?dataset=HuggingFaceM4%2FWebSight&config=v0.2&split=train&offset=$$step&length=$(WEBSIGHT_STEPS)" -o data/websight/websight_$$step.json; \
+		echo "Guardado en data/websight/websight_$$step.json"; \
+	done
+
+download-websight-win:
+	@echo Descargando WebSight dataset (train, offset $(WEBSIGHT_OFFSET), length $(WEBSIGHT_LENGTH))...
+	if not exist data\websight mkdir data\websight
+	@for step in $(shell seq $(WEBSIGHT_OFFSET) $(WEBSIGHT_STEPS) $(WEBSIGHT_LENGTH)); do \
+		echo "Descargando offset $$step..."; \
+		curl -X GET "https://datasets-server.huggingface.co/rows?dataset=HuggingFaceM4%2FWebSight&config=v0.2&split=train&offset=$$step&length=$(WEBSIGHT_STEPS)" -o data/websight/websight_$$step.json; \
+		echo "Guardado en data/websight/websight_$$step.json"; \
+	done
+
+
 ## Install project with development dependencies
 install-dev:
 	$(PYTHON_INTERPRETER) -m pip install --upgrade pip setuptools wheel
@@ -69,7 +96,7 @@ run-visual-agent:
 
 run-code-agent:
 	@echo "Running Code Agent..."
-	$(PYTHON_INTERPRETER) -m src.agen1ts.code_agent.src.server
+	$(PYTHON_INTERPRETER) -m src.agents.code_agent.src.server
 
 ## Run Streamlit web app
 run-server:
@@ -79,7 +106,7 @@ run-server:
 ## Build Pinecone vector index from HTML/CSS examples
 build-index:
 	@echo "Building Pinecone vector index for HTML/CSS examples..."
-	$(PYTHON_INTERPRETER) -c "from src.rag.ingestion.websight_loader import load_websight_examples; from src.runtime.adapters.pinecone_adapter import PineconeSearcher; docs = load_websight_examples(); print(f'Found {len(docs)} HTML/CSS examples'); print('Index building requires PINECONE_API_KEY in .env file')"
+	$(PYTHON_INTERPRETER) $(WEBSIGHT_LOADER_PATH) --max-examples=$(WEBSIGHT_MAX_EXAMPLES)
 
 ## Run UI-to-Code demo  
 ui-to-code-demo:

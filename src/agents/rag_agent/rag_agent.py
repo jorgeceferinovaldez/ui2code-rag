@@ -54,6 +54,7 @@ class RAGAgent:
             print(f"Error initializing RAG pipeline: {e}")
             self.rag_pipeline = None
 
+
     def _load_html_examples(self) -> list[Document]:
         """
         Load HTML/CSS examples from the ui_examples directory
@@ -66,11 +67,7 @@ class RAGAgent:
 
             # Check if examples directory exists
             if not examples_dir.exists():
-                print(f"Creating examples directory: {examples_dir}")
-                examples_dir.mkdir(parents=True, exist_ok=True)
-
-                # Create some sample HTML/CSS examples
-                self._create_sample_examples(examples_dir)
+                raise FileNotFoundError(f"Examples directory not found: {examples_dir}")
 
             # Load HTML files
             html_files = list(examples_dir.glob("**/*.html"))

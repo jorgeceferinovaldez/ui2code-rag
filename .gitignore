@@ -101,3 +101,5 @@ data/*.index
 
 # Claude files
 .claude*
+
+ui_examples/
