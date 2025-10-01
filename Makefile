@@ -69,7 +69,7 @@ run-visual-agent:
 
 run-code-agent:
 	@echo "Running Code Agent..."
-	$(PYTHON_INTERPRETER) -m src.agen1ts.code_agent.src.server
+	$(PYTHON_INTERPRETER) -m src.agents.code_agent.src.server
 
 ## Run Streamlit web app
 run-server:
