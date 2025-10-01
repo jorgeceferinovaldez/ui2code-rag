@@ -15,6 +15,7 @@ from src.logging_config import logger
 import argparse
 
 
+
 class WebSightLoader:
     """
     Loader for WebSight dataset - converts UI screenshots to HTML/CSS examples
@@ -384,8 +385,16 @@ class WebSightLoader:
                 for item in rows:
                     row = item.get("row", {})
                     html_text = row.get("text", "")
+                    description = row.get("llm_generated_idea", "")
                     if html_text:
-                        html_samples.append(html_text)
+                        html = {
+                        "type": "ecommerce_card",
+                        "description": description,
+                        "components": ["card", "image", "price", "button", "rating"],
+                        "html": html_text
+                        }
+                        html_samples.append(html)
+
                 logger.info(f"Extracted {len(rows)} rows from {file}")
             except Exception as e:
                 logger.error(f"Error leyendo {file}: {e}", exc_info=True)
@@ -410,11 +419,11 @@ class WebSightLoader:
                 "html": template["html"],
                 "text": self._extract_text_from_html(template["html"]),
                 "metadata": {
-                    "type": template["type"],
+                    "type": "unknown",
                     "description": template["description"],
-                    "components": template["components"],
+                    "components": [],
                     "created_at": datetime.now().isoformat(),
-                    "source": "sample_data"
+                    "source": "websight_dataset"
                 }
             }
             samples.append(sample)
@@ -588,7 +597,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Load WebSight documents")
     parser.add_argument("--max-examples", type=int, default=1000, help="Maximum number of examples to load")
     args = parser.parse_args()
+    
     logger.info(f"Running as __main__ with max_examples={args.max_examples}")
     docs = load_websight_documents(max_examples=args.max_examples)
     logger.info(f"Loaded {len(docs)} WebSight documents.")
+    
     print(f"Loaded {len(docs)} WebSight documents.")
+
+    
