@@ -6,7 +6,7 @@ PROJECT_NAME = ui-to-code-system
 ifeq ($(OS),Windows_NT)
     PYTHON_INTERPRETER = py
 else
-    PYTHON_INTERPRETER = python3
+    PYTHON_INTERPRETER = python
 endif
 VENV_NAME = venv
 PORT = 8501
@@ -69,7 +69,7 @@ run-visual-agent:
 
 run-code-agent:
 	@echo "Running Code Agent..."
-	$(PYTHON_INTERPRETER) -m src.agen1ts.code_agent.src.server
+	$(PYTHON_INTERPRETER) -m src.agents.code_agent.src.server
 
 ## Run Streamlit web app
 run-server:
