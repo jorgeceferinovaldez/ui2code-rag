@@ -215,3 +215,7 @@ verify-env:
 	$(PYTHON_INTERPRETER) -c "import sys; print(f'Python executable: {sys.executable}')"
 	@echo "Current directory: $(PWD)"
 	@echo "Environment verification completed"
+
+
+evaluate-retrieval:
+	$(PYTHON_INTERPRETER) -m src.rag.evaluators.evaluate_retrieval --docs data/evaluate/docs_ui_code_en.jsonl --qrels data/evaluate/qrels_ui_code_en.csv --ks 3,5 --top_retrieve 10 --top_final 5
