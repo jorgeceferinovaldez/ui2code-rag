@@ -23,13 +23,13 @@ from src.config import visual_agent_url, code_agent_url
 VISUAL_AGENT_URL = visual_agent_url
 CODE_AGENT_URL = code_agent_url
 
-# Objetivos de timeout (no se pasan a send_message; sirven para tunear transport/HTTPX)
+# Target timeouts (used to tune HTTPX / transports; not passed to send_message)
 TARGET_TIMEOUTS = {
     "visual": 180.0,
     "code": 120.0,
 }
 
-# Timeouts HTTPX amplios para requests largos/streaming
+# Wide HTTPX timeouts for long/streaming requests
 HTTPX_CONNECT_TIMEOUT = 10.0
 HTTPX_READ_TIMEOUT    = 240.0
 HTTPX_WRITE_TIMEOUT   = 240.0
@@ -48,8 +48,32 @@ class OrchestratorAgent:
             "rag": {"url": None, "card": None, "client": self.rag_agent},
         }
 
+    # --- helpers (optional, keep inside the class) ---
+    def _safe_json(self, obj) -> str:
+        import json
+        return json.dumps(obj, ensure_ascii=False)
+
+    def _serialize_patterns(self, patterns) -> str:
+        """Ensure patterns are JSON-serializable (tuples -> lists)."""
+        import json
+        if not patterns:
+            return "[]"
+        try:
+            return json.dumps(patterns, ensure_ascii=False)
+        except TypeError:
+            try:
+                safe = []
+                for p in patterns:
+                    if isinstance(p, tuple):
+                        safe.append(list(p))
+                    else:
+                        safe.append(p)
+                return json.dumps(safe, ensure_ascii=False)
+            except Exception:
+                return "[]"
+            
     async def initialize(self) -> None:
-        """Inicializa el cliente HTTP y obtiene las cards de ambos agentes."""
+        """Initialize HTTP client and fetch both agents' cards."""
         logger.info("Initializing HTTP client")
         timeout = httpx.Timeout(
             connect=HTTPX_CONNECT_TIMEOUT,
@@ -59,7 +83,7 @@ class OrchestratorAgent:
         )
         self.httpx_client = httpx.AsyncClient(timeout=timeout)
 
-        # Backoff para obtener agent cards (por si el server tarda en levantar)
+        # Exponential backoff to fetch agent cards (handles slow starts)
         for agent_name, agent_info in self.agents.items():
             url = agent_info["url"]
             if not url:
@@ -75,7 +99,7 @@ class OrchestratorAgent:
                     self.agents[agent_name]["card"] = card
                     self.agents[agent_name]["client"] = client
 
-                    # Intentar tunear el timeout del transport interno (si existe)
+                    # Best-effort transport timeout tuning (version-dependent internals)
                     self._tune_a2a_transport_timeout(client, TARGET_TIMEOUTS.get(agent_name, 120.0))
                     logger.info(f"{agent_name} agent card fetched OK on attempt {attempt}")
                     break
@@ -96,8 +120,8 @@ class OrchestratorAgent:
     @staticmethod
     def _tune_a2a_transport_timeout(client: A2AClient, seconds: float) -> None:
         """
-        Ajusta (best-effort) el timeout del transport JSON-RPC interno del A2AClient.
-        Algunas versiones exponen atributos privados distintos.
+        Best-effort: adjust the JSON-RPC transport timeout used by A2AClient.
+        Different library versions expose different attributes.
         """
         try:
             transport = getattr(client, "_transport", None) or getattr(client, "transport", None)
@@ -152,8 +176,8 @@ class OrchestratorAgent:
         message_payload: dict[str, Any],
     ) -> SendMessageResponse:
         """
-        Envía un mensaje al agente indicado y devuelve la respuesta A2A.
-        ¡No pasar timeout aquí! Algunas versiones de a2a no soportan ese kwarg.
+        Send a message to the specified agent and return the A2A response.
+        Do NOT pass a 'timeout' kwarg here (some a2a versions don't support it).
         """
         client = self.get_agent_client(agent_name)
         request = SendMessageRequest(
@@ -178,11 +202,11 @@ class OrchestratorAgent:
             raise
 
     def _validate_response(self, response: SendMessageResponse) -> bool:
+        """Lightweight structural checks for A2A responses."""
         try:
             if not response or not getattr(response, "root", None):
                 raise ValueError("Invalid response structure")
             if not isinstance(response.root, SendMessageSuccessResponse):
-                # ¡OJO! Nada de f-string con dicts/JSON dentro.
                 logger.error("Non-success response root: {}", type(response.root))
                 raise ValueError(f"Non-success response: {type(response.root).__name__}")
             if not isinstance(response.root.result, Message):
@@ -190,18 +214,15 @@ class OrchestratorAgent:
             if not response.root.result.parts:
                 raise ValueError("No parts in message result")
         except Exception as e:
-            # Evita f-strings 
             logger.error("Response validation error: {}", e, exc_info=True)
             raise RuntimeError("Response validation failed") from e
         return True
 
-
     def _get_analysis_result_from_response(self, response: SendMessageResponse) -> dict[str, Any]:
         """
-        Extrae dict JSON desde la respuesta del Visual Agent.
-        Usa la última parte de texto (el executor manda heartbeats antes, el final es el payload real).
+        Extract and parse the visual analysis dict from a Visual Agent response.
         """
-        # 1) parts → último text
+        # 1) Try last text part
         try:
             parts_list = get_text_parts(response.root.result.parts)
             if parts_list:
@@ -210,7 +231,7 @@ class OrchestratorAgent:
         except Exception:
             pass
 
-        # 2) fallback: texto directo
+        # 2) Fallback to full message text
         try:
             raw = get_message_text(response.root.result)
             if raw and raw.strip():
@@ -218,14 +239,75 @@ class OrchestratorAgent:
         except Exception:
             pass
 
-        # 3) dump para diagnóstico
+        # 3) Log for diagnostics
         dump = self._dump_response_safe(response)
         logger.error(f"Failed to decode JSON from visual analysis response. Dump: {dump[:1200]}")
         raise ValueError("Invalid JSON in visual analysis response")
+       # --- PUBLIC: visual-analysis -> code ---
+    async def send_message_to_code_agent(
+        self,
+        patterns: list | None,
+        analysis_result: dict,
+        custom_instructions: str = "",
+    ) -> dict:
+        """Send analysis_result + patterns to the Code Agent (UI image → code)."""
+        from uuid import uuid4
+        from a2a.utils import get_message_text
 
+        msg_parts = [
+            {"kind": "text", "metadata": {"type": "analysis_result"}, "text": self._safe_json(analysis_result or {})},
+            {"kind": "text", "metadata": {"type": "patterns"}, "text": self._serialize_patterns(patterns or [])},
+            {"kind": "text", "metadata": {"type": "custom_instructions"}, "text": custom_instructions or ""},
+        ]
+
+        payload = {
+            "message": {
+                "role": "user",
+                "parts": msg_parts,
+                "messageId": uuid4().hex,
+            }
+        }
+
+        resp = await self._send_message_to_agent("code", payload)
+        if self._validate_response(resp):
+            text = get_message_text(resp.root.result)
+            return json.loads(text) if text else {"error": "Empty response from Code Agent"}
+        return {"error": "Invalid response from Code Agent"}
+
+    # --- PUBLIC: prompt-only -> code ---
+    async def send_prompt_to_code_agent(
+        self,
+        prompt_text: str,
+        patterns: list | None = None,
+        custom_instructions: str = "",
+    ) -> dict:
+        """Send a natural-language prompt (no visual analysis) to the Code Agent."""
+        from uuid import uuid4
+        from a2a.utils import get_message_text
+
+        msg_parts = [
+            {"kind": "text", "metadata": {"type": "prompt"}, "text": prompt_text or ""},
+            {"kind": "text", "metadata": {"type": "patterns"}, "text": self._serialize_patterns(patterns or [])},
+            {"kind": "text", "metadata": {"type": "custom_instructions"}, "text": custom_instructions or ""},
+        ]
+
+        payload = {
+            "message": {
+                "role": "user",
+                "parts": msg_parts,
+                "messageId": uuid4().hex,
+            }
+        }
+
+        resp = await self._send_message_to_agent("code", payload)
+        if self._validate_response(resp):
+            text = get_message_text(resp.root.result)
+            return json.loads(text) if text else {"error": "Empty response from Code Agent"}
+        return {"error": "Invalid response from Code Agent"}
+    
     async def send_message_to_visual_agent(self, img_path: Path) -> dict[str, Any]:
-        """Envía una imagen al Visual Agent y devuelve el resultado del análisis."""
-        # Re-encode + downscale para bajar latencia
+        """Send an image to the Visual Agent and return the analysis result."""
+        # Re-encode + downscale for latency and stability
         try:
             from io import BytesIO
             with Image.open(img_path) as im:
@@ -269,21 +351,21 @@ class OrchestratorAgent:
         else:
             dump = self._dump_response_safe(response)
             raise RuntimeError(f"Invalid response from Visual Agent. Dump: {dump[:1500]}")
-
-    async def send_message_to_code_agent(
-        self,
-        patterns: list[tuple],
-        analysis_result: dict[str, Any],
-        custom_instructions: str = "",
+    
+    async def send_prompt_to_code_agent(
+    self,
+    prompt_text: str,
+    patterns: list[tuple] | None = None,
+    custom_instructions: str = "",
     ) -> dict[str, Any]:
-        """Envía el resultado del análisis visual y los patrones al Code Agent y devuelve el código generado."""
+        """Send a natural-language UI prompt to the Code Agent (Prompt → HTML)."""
         send_message_payload: dict[str, Any] = {
             "message": {
                 "role": "user",
                 "parts": [
-                    {"kind": "text", "metadata": {"type": "analysis_result"}, "text": json.dumps(analysis_result)},
-                    {"kind": "text", "metadata": {"type": "patterns"}, "text": json.dumps(patterns)},
-                    {"kind": "text", "metadata": {"type": "custom_instructions"}, "text": f"{custom_instructions}"},
+                    {"kind": "text", "metadata": {"type": "prompt"}, "text": prompt_text},
+                    {"kind": "text", "metadata": {"type": "patterns"}, "text": json.dumps(patterns or [])},
+                    {"kind": "text", "metadata": {"type": "custom_instructions"}, "text": custom_instructions or ""},
                 ],
                 "messageId": uuid4().hex,
             },
@@ -291,15 +373,15 @@ class OrchestratorAgent:
 
         response = await self._send_message_to_agent("code", send_message_payload)
         if self._validate_response(response):
-            code_result = get_message_text(response.root.result)
-            return json.loads(code_result)
+            text = get_message_text(response.root.result)
+            return json.loads(text) if text else {"error": "Empty response from Code Agent"}
         else:
             dump = self._dump_response_safe(response)
             raise RuntimeError(f"Invalid response from Code Agent. Dump: {dump[:1500]}")
-
+        
     @staticmethod
     async def test_process() -> None:
-        """Función de prueba para enviar mensajes a ambos agentes y procesar las respuestas."""
+        """Test function: visual → patterns → code, and prompt-only → code."""
         logger.info("Starting Orchestrator Agent test process")
         orchestrator = OrchestratorAgent(
             visual_url=VISUAL_AGENT_URL,
@@ -308,7 +390,7 @@ class OrchestratorAgent:
         await orchestrator.initialize()
         rag_agent: RAGAgent = orchestrator.get_agent_client("rag")
 
-        # VISUAL
+        # ---- VISUAL -> CODE (unchanged) ----
         logger.info("Sending test message to Visual Agent...")
         image_uri = "E:/Documentos/Git Repositories/ui2code-rag/tests/test_image.png"
         with open(image_uri, "rb") as image_file:
@@ -330,14 +412,12 @@ class OrchestratorAgent:
         analysis_result: dict[str, Any] = orchestrator._get_analysis_result_from_response(response_visual)
         logger.debug(f"Extracted visual analysis: {analysis_result}")
 
-        # RAG
         logger.info("Executing RAG Agent with visual analysis...")
         patterns: list[tuple] = rag_agent.invoke(analysis_result, top_k=5)
         logger.debug(f"RAG Agent retrieved patterns: {patterns}")
 
-        # CODE
-        custom_instructions = "Usar tema oscuro con acentos púrpura y efectos hover."
-        logger.info("Sending test message to Code Agent...")
+        custom_instructions = "Use dark theme with purple accents and hover effects."
+        logger.info("Sending test message to Code Agent (visual+patterns)...")
         send_message_payload_code: dict[str, Any] = {
             "message": {
                 "role": "user",
@@ -355,6 +435,12 @@ class OrchestratorAgent:
         assert orchestrator._validate_response(response_code)
         code_result = get_message_text(response_code.root.result)
         logger.info(f"Code Agent result: {code_result}")
+
+        # ---- PROMPT-ONLY -> CODE (NEW) ----
+        logger.info("Sending prompt-only test to Code Agent...")
+        prompt_text = "Landing page hero section with a navbar, big headline, CTA button, and feature cards. Tailwind only."
+        response_prompt = await orchestrator.send_prompt_to_code_agent(prompt_text, patterns=[], custom_instructions="mobile-first")
+        logger.info(f"Prompt-only Code Agent result: {response_prompt.get('status', 'OK')}")
 
         await orchestrator.close()
 

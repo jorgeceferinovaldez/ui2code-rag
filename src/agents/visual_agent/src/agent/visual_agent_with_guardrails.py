@@ -13,7 +13,6 @@ from ..guardrails.schemas.visual_agent_schema import OUTPUT_SCHEMA
 
 from .visual_agent import VisualAgent
 
-
 class VisualAgentWithGuardrails:
     output_schema = OUTPUT_SCHEMA
 
@@ -32,27 +31,26 @@ class VisualAgentWithGuardrails:
 
     @staticmethod
     def _normalize(raw: Dict[str, Any]) -> Dict[str, Any]:
-        """Normaliza claves para que el schema acepte las variantes actuales."""
+        """Normalizes keys so that the schema accepts current variants."""
         if not isinstance(raw, dict):
             return raw
 
-        # Asegurar analysis_text presente (aunque sea vacío)
+        # Ensure analysis_text is present (even if empty)
         raw.setdefault("analysis_text", "")
 
-        # Si sólo tenemos image_meta {w,h}, opcionalmente materializamos image_metadata
+        # If we only have image_meta {w,h}, optionally materialize image_metadata
         if "image_meta" in raw and "image_metadata" not in raw:
             try:
                 w = int(raw["image_meta"]["w"])
                 h = int(raw["image_meta"]["h"])
                 raw["image_metadata"] = {
                     "dimensions": {"width": w, "height": h, "aspect_ratio": (w / h) if h else 0.0},
-                    "dominant_colors": [],        # si no tenés, dejalo vacío
+                    "dominant_colors": [],   
                     "layout_hints": {},
                     "file_size": 0,
                     "format": "unknown",
                 }
             except Exception:
-                # Si falla, el schema igual acepta image_meta por anyOf
                 pass
 
         return raw
@@ -60,44 +58,38 @@ class VisualAgentWithGuardrails:
     @staticmethod
     def _coerce_guard_output_to_str(validated_output: Any) -> str:
         """
-        Guardrails puede devolver str o ValidationOutcome.
-        Extraemos la cadena JSON independientemente de la versión.
+        Guardrails can return str or ValidationOutcome.
+        Extract the JSON string regardless of version.
         """
         if isinstance(validated_output, str):
             return validated_output
 
-        # Duck-typing sobre atributos típicos
+        # Duck-typing over typic attributes
         for attr in ("output", "validated_output", "value", "raw_output"):
             s = getattr(validated_output, attr, None)
             if isinstance(s, str):
                 return s
 
-        # Último intento: repr → NO ideal, pero mejor mensaje de error
         raise TypeError(
-            f"Guard.parse() devolvió {type(validated_output).__name__} y no pude extraer una cadena JSON."
+            f"Guard.parse() returned {type(validated_output).__name__} and cannot extract JSON."
         )
 
     def invoke(self, image: Image) -> Dict[str, Any]:
-        logger.debug(f"Llamada a invoke con imagen de tamaño {image.size}")
+        logger.debug(f"Calling invoke with image size {image.size}")
 
-        # 1) Ejecutar el agente "crudo"
         raw: Dict[str, Any] = self.agent.invoke(image)
-
-        # 2) Normalización leve
         raw = self._normalize(raw)
-
-        # 3) Validación con Guardrails
         try:
             logger.debug(f"Resultado sin validar (normalizado): {raw}")
             validated = self._build_guard().parse(json.dumps(raw))
             validated_str = self._coerce_guard_output_to_str(validated)
             spec: Dict[str, Any] = json.loads(validated_str)
-            logger.debug(f"Resultado validado: {spec}")
+            logger.debug(f"Validated result: {spec}")
             return spec
 
         except Exception as e:
-            logger.error(f"Error durante la validación del Visual Agent: {e}")
+            logger.error(f"Error during Visual Agent validation: {e}")
             if self.on_fail == OnFailAction.EXCEPTION:
                 raise
-            logger.warning("Devolviendo salida cruda por política on_fail != EXCEPTION.")
+            logger.warning("Returning raw output due to on_fail != EXCEPTION policy.")
             return raw

@@ -47,25 +47,25 @@ class IsHTMLField(Validator):
         # Recupera la propiedad a validar desde los parámetros
         field_name = self.params.get("property")
         if not field_name:
-            raise FailResult(error_message="No se especificó la propiedad a validar (param 'property').")
+            raise FailResult(error_message="Property (param 'property') not specified.")
 
         if field_name not in parsed:
-            raise FailResult(error_message=f"Falta la propiedad '{field_name}' en el JSON.")
+            raise FailResult(error_message=f"Property '{field_name}' is missing from the JSON.")
 
         html_str = parsed[field_name]
 
         if not isinstance(html_str, str):
-            raise FailResult(error_message=f"El campo '{field_name}' no es un string.")
+            raise FailResult(error_message=f"Field '{field_name}' is not a string.")
 
         if "<" not in html_str or ">" not in html_str:
-            raise FailResult(error_message=f"El campo '{field_name}' no contiene etiquetas HTML.")
+            raise FailResult(error_message=f"Field '{field_name}' does not contain HTML tags.")
 
         try:
             soup = BeautifulSoup(html_str, "html.parser")
         except Exception as e:
-            raise FailResult(error_message=f"Error al parsear HTML en '{field_name}': {e}")
+            raise FailResult(error_message=f"Error parsing HTML in '{field_name}': {e}")
 
         if soup.find() is None:
-            raise FailResult(error_message=f"No se encontraron etiquetas HTML en '{field_name}'.")
+            raise FailResult(error_message=f"No HTML tags found in '{field_name}'.")
 
         return PassResult()

@@ -12,8 +12,8 @@ _SPACING_BRACKET_RE = re.compile(
 class ThemeTokensOnly:
     """
     - Prohíbe 'style=' inline.
-    - Colores arbitrarios bg/text/border-[#XXXXXX] deben pertenecer al palette.
-    - Spacing arbitrarios p-[16px] etc. deben ser múltiplos de spacing_unit.
+    - Colors bg/text/border-[#XXXXXX] should be from the palette.
+    - Spacing arbitrarios p-[16px] etc. should be multiples of spacing_unit.
     """
     rail_alias = "theme_tokens_only"
     name = "theme_tokens_only"
@@ -33,7 +33,7 @@ class ThemeTokensOnly:
             result = json.loads(value)
             html_code = result.get("html_code", "")
         except Exception:
-            self._fail("[ThemeTokensOnly] Resultado no parseable o sin 'html_code'.")
+            self._fail("[ThemeTokensOnly] Result not parseable or missing 'html_code'.")
             return value
 
         soup = BeautifulSoup(html_code, "html.parser")
@@ -41,7 +41,7 @@ class ThemeTokensOnly:
         for tag in soup.find_all(True):
             # 1) Sin estilos inline
             if tag.has_attr("style"):
-                self._fail("[ThemeTokensOnly] style= inline no permitido.")
+                self._fail("[ThemeTokensOnly] style= inline no permitted.")
             # 2) Validaciones por clases
             cls: List[str] = []
             if tag.has_attr("class"):
@@ -51,11 +51,11 @@ class ThemeTokensOnly:
                 for m in _COLOR_BRACKET_RE.finditer(class_str):
                     hexv = m.group(1).lower()
                     if hexv not in self.allowed:
-                        self._fail(f"[ThemeTokensOnly] Color {hexv} no está en palette permitido {self.allowed}.")
+                        self._fail(f"[ThemeTokensOnly] Color {hexv} not in allowed palette {self.allowed}.")
 
                 for m in _SPACING_BRACKET_RE.finditer(class_str):
                     px = int(m.group(1))
                     if px % self.spacing_unit != 0:
-                        self._fail(f"[ThemeTokensOnly] Spacing {px}px no múltiplo de spacing_unit={self.spacing_unit}.")
+                        self._fail(f"[ThemeTokensOnly] Spacing {px}px not multiple of spacing_unit={self.spacing_unit}.")
 
         return value

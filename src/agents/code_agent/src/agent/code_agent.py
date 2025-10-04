@@ -8,7 +8,7 @@ import openai
 
 # Custom dependencies
 from ..config import settings
-from ..texts.prompts import SYSTEM_PROMPT, GENERATION_PROMPT_TEMPLATE  # podés mantener; no es obligatorio
+from ..texts.prompts import SYSTEM_PROMPT, GENERATION_PROMPT_TEMPLATE 
 from ..texts.html_examples import write_examples, FALLBACK_HTML
 
 OPENROUTER_API_KEY = settings.openrouter_api_key
@@ -27,7 +27,7 @@ class CodeAgent:
       "status": "OK" | "INSUFFICIENT_EVIDENCE",
       "hash": "<eco del visual_analysis.hash>",
       "used_component_ids": ["..."],
-      "missing": ["..."],           # opcional cuando hay insuficiente evidencia
+      "missing": ["..."],           # optional when status == "INSUFFICIENT_EVIDENCE"
       "html_code": "<html>...</html>"
     }
     """
@@ -47,6 +47,100 @@ class CodeAgent:
 
     # ------------------------------- PUBLIC -------------------------------
 
+    def invoke_from_prompt(
+        self,
+        prompt_text: str,
+        patterns: list[tuple] | None = None,
+        custom_instructions: str = ""
+    ) -> dict[str, Any]:
+        """Genera HTML/Tailwind sólo desde un prompt (sin análisis visual)."""
+
+        pattern_context = self._format_patterns_for_generation(patterns or [])
+
+        system = self._system_contract()
+        user_prompt = f"""
+Generate a clean, responsive HTML page using Tailwind CSS based on this UI description.
+
+Constraints:
+- Tailwind utilities only (no <style>, no inline style).
+- Semantic HTML where possible.
+- Accessible (labels/ARIA when applicable).
+- Keep it minimal and modern.
+
+UI description:
+{prompt_text}
+
+Inspiration snippets (do NOT copy tokens blindly):
+{pattern_context}
+
+Extra requirements:
+{custom_instructions or "(none)"}
+
+Output ONLY the HTML (no markdown fence).
+        """.strip()
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user_prompt},
+            ],
+            max_tokens=MAX_TOKENS,
+            temperature=TEMPERATURE,
+        )
+
+        generated = (response.choices[0].message.content or "").strip()
+        cleaned = self._clean_generated_code(generated)
+        if not cleaned:
+            cleaned = self._get_fallback_html()
+
+        #avoid empty minItems/arrays 
+        visual_components = ["from_prompt"]
+        summary_components = [{"id": "prompt_0", "type": "container"}]
+
+        return {
+            "html_code": cleaned,
+            "generation_metadata": {
+                "model_used": self.model,
+                "patterns_used": len(patterns or []),
+                "visual_components": visual_components,
+                "custom_instructions": (custom_instructions or "").strip(),
+                "timestamp": datetime.now().isoformat(),
+            },
+            "visual_analysis_summary": {
+                "components": summary_components,
+                "layout": "from_prompt",
+                "style": "modern",
+            },
+            "status": "OK",
+            "hash": "",
+            "used_component_ids": [],
+            "missing": [],
+        }
+        
+    def _get_generation_prompt(
+            self, visual_analysis: dict[str, Any], pattern_context: str, custom_instructions: str = ""
+        ) -> str:
+            """Construct the full prompt for code generation"""
+            components = ", ".join(visual_analysis.get("components", []))
+            layout = visual_analysis.get("layout", "modern layout")
+            style = visual_analysis.get("style", "clean and modern")
+            color_scheme = visual_analysis.get("color_scheme", "neutral colors")
+
+            ci_text = (
+                f"\n\nINSTRUCCIONES ADICIONALES DEL USUARIO:\n{custom_instructions.strip()}"
+                if custom_instructions and custom_instructions.strip()
+                else ""
+            )
+
+            return GENERATION_PROMPT_TEMPLATE.format(
+                components=components,
+                layout=layout,
+                style=style,
+                color_scheme=color_scheme,
+                pattern_context=pattern_context,
+                custom_instructions=ci_text,
+            )
     def invoke(
         self, patterns: list[tuple], visual_analysis: dict[str, Any], custom_instructions: str = ""
     ) -> dict[str, Any]:
@@ -67,19 +161,18 @@ class CodeAgent:
             generated_code = (response.choices[0].message.content or "").strip()
             cleaned_code = self._clean_generated_code(generated_code).strip()
 
-            # ⚠️ Nunca devolver vacío
             if not cleaned_code:
                 cleaned_code = self._get_fallback_html()
 
             raw_components = visual_analysis.get("components", [])
 
-            # Para metadata (array de strings)
+            # metadata: just types or ids
             if raw_components and isinstance(raw_components[0], dict):
                 components_for_metadata = [c.get("type", "") for c in raw_components if isinstance(c, dict)]
             else:
                 components_for_metadata = raw_components
 
-            # Para summary (acepta objetos o strings; si está vacío, ponemos 1 placeholder)
+            # for summary according to schema
             if not raw_components:
                 summary_components = [{"id": "auto_0", "type": "container"}]
             else:
@@ -102,7 +195,7 @@ class CodeAgent:
             }
 
         except Exception as e:
-            # Fallback robusto
+            # Fallback 
             return {
                 "html_code": self._get_fallback_html(),
                 "generation_metadata": {
@@ -130,7 +223,7 @@ class CodeAgent:
         write_examples(examples_dir)
 
     def _system_contract(self) -> str:
-        # Podés concatenar SYSTEM_PROMPT si lo usás; lo importante es el contrato JSON-only
+        
         return (
             "You are a deterministic UI-to-HTML code generator. "
             "Output ONLY a single JSON object with the required fields. No prose, no markdown."
@@ -140,8 +233,6 @@ class CodeAgent:
         """Usar patrones como CONTEXTO, evitando que el modelo copie literal sin control."""
         if not patterns:
             return "No similar patterns found."
-
-        # Resumimos para reducir fuga de estilos no deseados
         formatted = []
         for i, (doc_id, chunk, metadata, score) in enumerate(patterns, 1):
             source_name = "unknown"
@@ -246,10 +337,9 @@ class CodeAgent:
 
     def _parse_json_strict_or_recover(self, content: str, analysis_hash: str) -> Dict[str, Any]:
         """Intenta json.loads; si falla, intenta extraer ```json ...``` o limpia HTML."""
-        # 1) JSON directo
         try:
             obj = json.loads(content)
-            # Normalizar mínimos requeridos
+            # normalization
             obj.setdefault("status", "OK")
             obj.setdefault("hash", analysis_hash)
             obj.setdefault("used_component_ids", [])
@@ -258,7 +348,7 @@ class CodeAgent:
         except Exception:
             pass
 
-        # 2) Bloque ```json ... ```
+        # 2) ```json ... ```
         start = content.find("```json")
         if start != -1:
             start += len("```json")
@@ -274,7 +364,7 @@ class CodeAgent:
                 except Exception:
                     pass
 
-        # 3) Como último recurso: limpiar HTML y envolver en JSON OK
+        # 3) Last resource: clean HTML
         cleaned = self._clean_generated_code(content)
         return {
             "status": "OK",

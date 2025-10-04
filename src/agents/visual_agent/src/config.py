@@ -16,10 +16,10 @@ class Settings(BaseSettings):
 
     openrouter_api_key: Optional[str] = None
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
-    openrouter_model: str = "x-ai/grok-4-fast:free"
+    openrouter_model: str = "moonshotai/kimi-vl-a3b-thinking:free"
 
     openai_key: Optional[str] = None
-    openai_model: str = "x-ai/grok-4-fast:free"
+    openai_model: str = "moonshotai/kimi-vl-a3b-thinking:free"
 
     host: str = "localhost"
     port: int = 10000

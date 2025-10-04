@@ -7,8 +7,8 @@ from ..utils.spec_utils import compute_coverage
 
 class ConfidenceCoverageValidator:
     """
-    Valida umbral de confianza media y cobertura total de bboxes.
-    Compatible con Guardrails: define rail_alias, name y validate(value, metadata=None).
+    Validates that the mean confidence of components is above min_conf
+    and that the coverage of components over the image is above min_cov.
     """
     rail_alias = "confidence_coverage"
     name = "confidence_coverage"
@@ -20,7 +20,7 @@ class ConfidenceCoverageValidator:
 
     def _fail(self, msg: str):
         if self.on_fail == OnFailAction.EXCEPTION:
-            # Guardrails espera que se lance una excepción en modo EXCEPTION
+            # Guardrails waits for ValueError
             raise ValueError(msg)
         logger.warning(msg)
 
@@ -29,12 +29,12 @@ class ConfidenceCoverageValidator:
         try:
             data: Dict[str, Any] = json.loads(value)
         except Exception as e:
-            self._fail(f"[ConfidenceCoverage] JSON inválido: {e}")
+            self._fail(f"[ConfidenceCoverage] invalid JSON: {e}")
             return value
 
         comps: List[Dict[str, Any]] = data.get("components", [])
         if not comps:
-            self._fail("[ConfidenceCoverage] Spec sin 'components'.")
+            self._fail("[ConfidenceCoverage] Spec without 'components'.")
             return value
 
         confidences = [float(c.get("confidence", 0.0)) for c in comps if "confidence" in c]
@@ -44,8 +44,8 @@ class ConfidenceCoverageValidator:
         cov = compute_coverage(comps, int(meta.get("w", 0)), int(meta.get("h", 0)))
 
         if mean_conf < self.min_conf:
-            self._fail(f"[ConfidenceCoverage] Confianza media {mean_conf:.2f} < {self.min_conf:.2f}")
+            self._fail(f"[ConfidenceCoverage] Mean confidence {mean_conf:.2f} < {self.min_conf:.2f}")
         if cov < self.min_cov:
-            self._fail(f"[ConfidenceCoverage] Cobertura {cov:.2f} < {self.min_cov:.2f}")
+            self._fail(f"[ConfidenceCoverage] Coverage {cov:.2f} < {self.min_cov:.2f}")
 
         return value

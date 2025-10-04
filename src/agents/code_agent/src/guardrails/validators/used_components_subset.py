@@ -4,7 +4,7 @@ from guardrails import OnFailAction
 from loguru import logger
 
 class UsedComponentsSubset:
-    """Exige que used_component_ids sea subconjunto de los ids detectados por el Visual Agent."""
+    """Use used_component_ids as a subset of the ids detected by the Visual Agent."""
     rail_alias = "used_components_subset"
     name = "used_components_subset"
 
@@ -21,10 +21,10 @@ class UsedComponentsSubset:
         try:
             data: Dict[str, Any] = json.loads(value)
         except Exception:
-            self._fail("[UsedComponentsSubset] Respuesta del Code Agent no es JSON.")
+            self._fail("[UsedComponentsSubset] Response from Code Agent is not JSON.")
             return value
 
         used = set(data.get("used_component_ids", []))
         if not used.issubset(self.allowed):
-            self._fail(f"[UsedComponentsSubset] used={used - self.allowed} no pertenecen a allowed={self.allowed}.")
+            self._fail(f"[UsedComponentsSubset] used={used - self.allowed} not in allowed={self.allowed}.")
         return value

@@ -92,16 +92,16 @@ class VisualA2AAgentExecutor(AgentExecutor):
         for fp in file_parts:
             mime = getattr(fp, "mime_type", None) or getattr(fp, "mimeType", None)
             if mime in SUPPORTED_MIMES:
-                # fp.bytes suele ser un string base64 (sin data URL) enviado por el orquestador
                 data = fp.bytes
                 if not isinstance(data, str):
-                    # por si alguna versión envía bytes crudos
                     data = data.decode("utf-8")
                 return data, mime
 
-            # Si viene como data URL embebido en .bytes, lo manejamos también
+            # if data coming as bytes, convert to str
             data = fp.bytes
-            if isinstance(data, str) and data.startswith("data:image/"):
+            if not isinstance(data, str):
+                data = data.decode("utf-8")
+            if data.startswith("data:image/"):
                 # form: data:image/png;base64,AAA...
                 try:
                     header, b64 = data.split(",", 1)
@@ -114,13 +114,12 @@ class VisualA2AAgentExecutor(AgentExecutor):
     def _load_image_from_base64(self, base64_image: str) -> Image.Image:
         """Load an image from a base64 encoded string (with or without data URL)."""
         try:
-            # remover posible encabezado data URL si lo tuviera
             if base64_image.startswith("data:image/"):
                 base64_image = base64_image.split(",", 1)[-1]
 
             image_data = base64.b64decode(base64_image)
             image = Image.open(BytesIO(image_data))
-            # normalizar a RGB para evitar modos raros (P, LA, RGBA)
+            # normalize to RGB to avoid weird modes (P, LA, RGBA)
             if image.mode not in ("RGB", "L"):
                 image = image.convert("RGB")
             return image

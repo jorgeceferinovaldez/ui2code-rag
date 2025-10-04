@@ -45,16 +45,16 @@ class DomWhitelistTagsAndTailwindClasses:
         soup = BeautifulSoup(html_code, "html.parser")
         for tag in soup.find_all(True):
             if tag.name not in _ALLOWED_TAGS:
-                self._fail(f"[DomWhitelist] Tag <{tag.name}> no permitido.")
+                self._fail(f"[DomWhitelist] Tag <{tag.name}> no permitted.")
 
             for attr in list(tag.attrs.keys()):
                 if attr not in _ALLOWED_ATTRS:
-                    self._fail(f"[DomWhitelist] Atributo '{attr}' no permitido en <{tag.name}>.")
+                    self._fail(f"[DomWhitelist] Attribute '{attr}' no permitted in <{tag.name}>.")
 
             if tag.has_attr("class"):
                 cls_tokens: List[str] = tag["class"] if isinstance(tag["class"], list) else str(tag["class"]).split()
                 for tok in cls_tokens:
                     if not _class_ok(str(tok)):
-                        self._fail(f"[DomWhitelist] Clase tailwind no permitida: '{tok}'.")
+                        self._fail(f"[DomWhitelist] Tailwind class not permitted: '{tok}'.")
 
         return value
