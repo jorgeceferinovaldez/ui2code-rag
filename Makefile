@@ -16,7 +16,7 @@ WEBSIGHT_LENGTH = 1000
 WEBSIGHT_STEPS=100
 
 WEBSIGHT_LOADER_PATH = src/rag/ingestion/websight_loader.py
-WEBSIGHT_MAX_EXAMPLES = 15
+WEBSIGHT_MAX_EXAMPLES = 1000
 
 ## Display help information
 help:
@@ -104,7 +104,7 @@ run-server:
 	$(PYTHON_INTERPRETER) -m streamlit run app/streamlit_app.py --server.port $(PORT) --server.address 0.0.0.0
 
 ## Build Pinecone vector index from HTML/CSS examples
-build-index:
+build-html:
 	@echo "Building Pinecone vector index for HTML/CSS examples..."
 	$(PYTHON_INTERPRETER) $(WEBSIGHT_LOADER_PATH) --max-examples=$(WEBSIGHT_MAX_EXAMPLES)
 
