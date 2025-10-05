@@ -21,7 +21,7 @@ ENV POETRY_NO_INTERACTION=1 \
 SHELL ["/bin/bash", "-c"]
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y curl git && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
 RUN curl -sSL https://install.python-poetry.org | python3 -
