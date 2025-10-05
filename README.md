@@ -6,10 +6,10 @@
 
 <div align="center">
 
-| Subtitulo       | UI2Code               |
-| --------------- | ------------------------------------- |
-| **Descrpción**  | UI2Code es un sistema avanzado que convierte diseños de interfaces <br/> de usuario en código  HTML/Tailwind CSS utilizando IA. Combina <br/> análisis visual inteligente con búsqueda semántica de patrones de <br/> código para generar código limpio y moderno.         |
-| **Integrantes** | -Noelia Melina Qualindi (noelia.qualindi@gmail.com)<br/> - Fabricio Denardi (denardifabricio@gmail.com)<br/> - Jorge Ceferino Valdez (jorgecvaldez@gmail.com)<br/> -Bruno Masoller (brunomaso1@gmail.com) |
+| Subtitulo       | UI2Code                                                                                                                                                                                                                                                            |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Descrpción**  | UI2Code es un sistema avanzado que convierte diseños de interfaces <br/> de usuario en código  HTML/Tailwind CSS utilizando IA. Combina <br/> análisis visual inteligente con búsqueda semántica de patrones de <br/> código para generar código limpio y moderno. |
+| **Integrantes** | -Noelia Melina Qualindi (noelia.qualindi@gmail.com)<br/> - Fabricio Denardi (denardifabricio@gmail.com)<br/> - Jorge Ceferino Valdez (jorgecvaldez@gmail.com)<br/> -Bruno Masoller (brunomaso1@gmail.com)                                                          |
 
 </div>
 
@@ -77,7 +77,7 @@ Visita **http://localhost:8501** para acceder a la interfaz web interactiva.
 - **Interfaz Web Streamlit**: Interfaz interactiva multi-página
 - **Configuración Dinámica**: Estructura flexible usando pyprojroot
 - **Integración Pinecone**: Base de datos vectorial escalable para búsqueda semántica
-- **Sistema Multi-Agente A2A**: Agente Visual + Agente de Código trabajando en conjunto
+- **Sistema Multi-Agente A2A**: Agente Visual + Agente de Código trabajando en conjunto por medio de un orquestador
 - **Monitoreo en Tiempo Real**: Dashboard de estado del sistema
 
 ## Arquitectura
@@ -103,43 +103,85 @@ El sistema implementa un flujo multi-agente especializado en UI-to-Code:
 ### Componentes Principales
 
 * **Visual Agent**: Utiliza modelos de visión (Gemini Flash, GPT-Vision) para análisis de imágenes UI
-* **Code RAG Agent**: Wrapper del sistema RAG existente especializado en HTML/CSS
+* **Code Agent**: Agente de generación de código (DeepSeek, GPT) que produce HTML/Tailwind CSS
+* **Orquestador A2A**: Coordina la comunicación entre agentes y el flujo de datos. Se encarga del RAG híbrido
 * **RAG Híbrido**: Combina BM25 (léxica) + Búsqueda Vectorial (semántica) + Cross-Encoder
 * **WebSight Dataset Adapter**: Carga y procesa ejemplos de HTML/CSS para la base de conocimiento
 * **OpenRouter Integration**: Soporte para modelos económicos y de código abierto
+* **Pinecone Vector DB**: Almacena embeddings para búsqueda semántica eficiente
+* **Guardrails**: Asegura que las salidas de los agentes cumplan con formatos y restricciones específicas
 
-## Estructura del Proyecto
+## Estructura principal del proyecto
 
-<!-- TODO: Actualizar estructura del proyecto. -->
-
+```bash
+Ui2Code/
+├── app                          # Aplicación Streamlit
+│   └── streamlit_app.py         # Aplicación principal del sistema
+├── corpus                       # Conjunto de documentos para el sistema
+├── data                         # Datos utilizados por el sistema
+├── docs                         # Documentación del sistema
+├── logs                         # Archivos de registro del sistema
+├── src                          # Código fuente del sistema/
+│   ├── agents                   # Agentes del sistema/
+│   │   ├── code_agent           # Agente de código
+│   │   ├── orchestator_agent    # Agente orquestador
+│   │   ├── rag_agent            # Agente RAG
+│   │   └── visual_agent         # Agente visual
+│   ├── rag                      # Sistema RAG
+│   ├── runtime                  # Entorno de ejecución
+│   ├── config.py                # Configuración del sistema
+│   ├── config.yaml              # Configuración del sistema
+│   └── logging_config.py        # Configuración de registro
+├── tests                        # Pruebas del sistema
+├── ui_examples                  # Ejemplos de interfaz de usuario
+├── .env.example                 # Archivo de ejemplo de variables de entorno
+├── check_deps.py                # Verificación de dependencias
+├── download_websight.py         # Descarga de datos de WebSight
+├── Makefile                     # Archivo Makefile
+├── poetry.lock                  # Archivo de fijación de dependencias de Poetry
+├── pyproject.toml               # Archivo de configuración de Poetry
+├── quick_start.py               # Guía de inicio rápido
+├── README.md                    # Archivo README
+├── requirements-dev.txt         # Dependencias de desarrollo
+├── requirements.txt             # Dependencias de producción
+├── run_streamlit.py             # Ejecutar la aplicación Streamlit
+└── setup.py                     # Script de configuración
 ```
-ui-to-code-system/
-├── app/
-│   └── streamlit_app.py          # Interfaz multi-página (RAG + UI-to-Code)
-├── src/
-│   ├── config.py                 # Configuración dinámica de rutas
-│   ├── config.yaml               # Definiciones de rutas (actualizado)
-│   ├── agents/                   # Sistema Multi-Agente
-│   │   ├── visual_agent.py       # Agente de análisis visual
-│   │   └── code_rag_agent.py     # Agente RAG especializado en código
-│   ├── rag/                      # Sistema RAG base (reutilizado)
-│   │   ├── core/                 # Pipeline híbrido robusto
-│   │   ├── ingestion/            # PDF + WebSight HTML/CSS loader
-│   │   ├── retrievers/           # BM25 + Vector + Cross-Encoder
-│   │   └── evaluators/           # Métricas de evaluación
-│   └── runtime/
-│       └── adapters/             # Pinecone adapter (actualizado)
-├── ui_examples/                  # Ejemplos HTML/CSS para RAG
-├── data/
-│   ├── temp_images/              # Imágenes temporales
-│   ├── generated_code/           # Código HTML generado
-│   └── websight/                 # Cache del dataset WebSight
-├── corpus/                       # PDFs (para compatibilidad RAG original)
-├── requirements.txt              # Dependencias actualizadas
-├── .env.example                  # Variables OpenRouter + Pinecone
-├── run_streamlit.py              # Launcher (sin cambios)
-└── README.md                     # Documentación completa
-```
+
+<!--  https://tree.nathanfriend.com/
+Ui2Code
+  app                     
+    streamlit_app.py      # Aplicación principal del sistema
+  corpus                   # Conjunto de documentos para el sistema
+  data                     # Datos utilizados por el sistema
+  docs                     # Documentación del sistema
+  logs                     # Archivos de registro del sistema
+  src                      # Código fuente del sistema
+    agents                 # Agentes del sistema
+      code_agent           # Agente de código
+      orchestator_agent    # Agente orquestador
+      rag_agent            # Agente RAG
+      visual_agent         # Agente visual
+    rag                     # Sistema RAG
+    runtime                 # Entorno de ejecución
+    config.py               # Configuración del sistema
+    config.yaml             # Configuración del sistema
+    logging_config.py       # Configuración de registro
+  tests                     # Pruebas del sistema
+  ui_examples               # Ejemplos de interfaz de usuario
+  .env.example              # Archivo de ejemplo de variables de entorno
+  check_deps.py             # Verificación de dependencias
+  download_websight.py      # Descarga de datos de WebSight
+  Makefile                  # Archivo Makefile
+  poetry.lock               # Archivo de fijación de dependencias de Poetry
+  pyproject.toml            # Archivo de configuración de Poetry
+  quick_start.py            # Guía de inicio rápido
+  README.md                 # Archivo README
+  requirements-dev.txt      # Dependencias de desarrollo
+  requirements.txt          # Dependencias de producción
+  run_streamlit.py          # Ejecutar la aplicación Streamlit
+  setup.py                  # Script de configuración
+ -->
 
 ## Instalación y Configuración
 
@@ -164,6 +206,19 @@ ui-to-code-system/
 **Datasets y utilidades:**
 - `datasets>=2.14.0` - Carga de WebSight dataset
 - `requests>=2.31.0` - Cliente HTTP
+
+**A2A y Guardrails:**
+- `guardrails-ai>=0.6.6` - Framework de guardrails para IA
+- `click >=8.3.0<9.0.0)` - CLI para Python
+- `httpx >=0.28.1<0.29.0)` - Cliente HTTP asíncrono
+- `pydantic >=2.11.9<3.0.0)` - Validación de datos
+- `uvicorn >=0.37.0<0.38.0)` - Servidor ASGI
+- `sse-starlette >=3.0.2<4.0.0)` - SSE para Starlette
+- `starlette >=0.48.0<0.49.0)` - Servidor
+- `a2a-sdk >=0.3.6<0.4.0)` - SDK para agentes A2A
+- `nest-asyncio >=1.6.0<2.0.0)` - Soluciona asincrónica anidada
+- `loguru >=0.7.3<0.8.0)` - Logging avanzado
+- `pydantic-settings >=2.11.0<3.0.0)` - Configuración basada en Pydantic
 
 ### Métodos de Instalación
 
