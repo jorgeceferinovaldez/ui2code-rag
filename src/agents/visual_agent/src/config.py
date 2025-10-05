@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Optional
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from loguru import logger
 import json
@@ -24,6 +25,31 @@ class Settings(BaseSettings):
 
     host: str = "localhost"
     port: int = 10000
+
+    @model_validator(mode="after")
+    def check_keys_and_models(self):
+        """Ensure consistency between API keys and models, and at least one provider configured."""
+        openrouter_ok = bool(self.openrouter_api_key and self.openrouter_model)
+        openai_ok = bool(self.openai_key and self.openai_model)
+
+        if not openrouter_ok and not openai_ok:
+            raise ValueError(
+                "Error de configuración. Se requiere al menos un proveedor de LLM: "
+                "OpenRouter (openrouter_api_key + openrouter_model) "
+                "o OpenAI (openai_key + openai_model). Esto debe venir en el archivo .env o en las variables de entorno."
+            )
+
+        if self.openrouter_api_key and not self.openrouter_model:
+            raise ValueError(
+                "Error de configuración: está configurado openrouter_api_key pero falta openrouter_model. Esto debe venir en el archivo .env o en las variables de entorno. Puedes ver un ejemplo en .env.example."
+            )
+
+        if self.openai_key and not self.openai_model:
+            raise ValueError(
+                "Error de configuración: está configurado openai_key pero falta openai_model. Esto debe venir en el archivo .env o en las variables de entorno. Puedes ver un ejemplo en .env.example."
+            )
+
+        return self
 
 
 settings = Settings()

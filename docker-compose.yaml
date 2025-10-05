@@ -1,0 +1,32 @@
+name: NLP3
+
+services:
+  code-agent:
+    build:
+      context: ./src/agents/code_agent
+      dockerfile: Dockerfile
+    container_name: code-agent
+    env_file:
+      - ./src/agents/code_agent/.env
+    ports:
+      - "10001:10001"
+    restart: unless-stopped
+    networks:
+      - agents-net
+
+  visual-agent:
+    build:
+      context: ./src/agents/visual_agent
+      dockerfile: Dockerfile
+    container_name: visual-agent
+    env_file:
+      - ./src/agents/visual_agent/.env
+    ports:
+      - "10000:10000"
+    restart: unless-stopped
+    networks:
+      - agents-net
+
+networks:
+  agents-net:
+    driver: bridge

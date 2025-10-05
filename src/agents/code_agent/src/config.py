@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import model_validator
 from loguru import logger
 import json
 
@@ -15,19 +16,49 @@ if env_file_path.exists():
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=env_file, env_file_encoding="utf-8", extra="ignore")
 
+    # OpenRouter
     openrouter_api_key: Optional[str] = None
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
-    openrouter_model: str = "x-ai/grok-4-fast:free"
+    openrouter_model: Optional[str] = None
 
+    # OpenAI
     openai_key: Optional[str] = None
-    openai_model: str = "gpt-4"
+    openai_model: Optional[str] = None
 
+    # Common
     max_tokens: int = 2000
     temperature: float = 0.1
 
+    # Server
     host: str = "localhost"
     port: int = 10001
 
+    @model_validator(mode="after")
+    def check_keys_and_models(self):
+        """Ensure consistency between API keys and models, and at least one provider configured."""
+        openrouter_ok = bool(self.openrouter_api_key and self.openrouter_model)
+        openai_ok = bool(self.openai_key and self.openai_model)
+
+        if not openrouter_ok and not openai_ok:
+            raise ValueError(
+                "Error de configuración. Se requiere al menos un proveedor de LLM: "
+                "OpenRouter (openrouter_api_key + openrouter_model) "
+                "o OpenAI (openai_key + openai_model). Esto debe venir en el archivo .env o en las variables de entorno."
+            )
+
+        if self.openrouter_api_key and not self.openrouter_model:
+            raise ValueError(
+                "Error de configuración: está configurado openrouter_api_key pero falta openrouter_model. Esto debe venir en el archivo .env o en las variables de entorno. Puedes ver un ejemplo en .env.example."
+            )
+
+        if self.openai_key and not self.openai_model:
+            raise ValueError(
+                "Error de configuración: está configurado openai_key pero falta openai_model. Esto debe venir en el archivo .env o en las variables de entorno. Puedes ver un ejemplo en .env.example."
+            )
+
+        return self
+
 
 settings = Settings()
+
 logger.debug(f"Configuration loaded: {json.dumps(settings.model_dump(), indent=2, default=str)}")
