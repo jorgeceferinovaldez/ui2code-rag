@@ -10,7 +10,7 @@ from pathlib import Path
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from src.rag.core.documents import Document, chunk_text
+from src.rag.core.documents import Document, chunk_text,chunk_html_semantic_with_tags
 from src.rag.retrievers.bm25_retriever import BM25Index
 from src.rag.retrievers.cross_encoder_reranker import CrossEncoderReranker
 from src.rag.retrievers.fusion import rrf_combine
@@ -40,7 +40,7 @@ class RagPipeline:
         # Chunking con fallback (no perder páginas cortas)
         self.chunks_per_doc: Dict[str, List[str]] = {}
         for d in docs:
-            chunks = chunk_text(d.text, max_tokens_chunk, overlap)
+            chunks = chunk_html_semantic_with_tags(d.text, max_tokens_chunk, overlap)
             if not chunks:
                 txt = " ".join((d.text or "").split())
                 if txt:

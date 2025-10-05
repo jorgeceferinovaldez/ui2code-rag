@@ -30,6 +30,7 @@ ui_to_code:
   temp_images_dir: "data/temp_images"
   generated_code_dir: "data/generated_code"
   websight_data_dir: "data/websight"
+  websight_data_file_name: "websight"
 
 # Configuration files
 files:

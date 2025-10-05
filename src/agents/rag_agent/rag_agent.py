@@ -5,6 +5,7 @@ from typing import Any
 from src.config import ui_examples_dir
 from src.rag.core.rag_pipeline import RagPipeline
 from src.rag.core.documents import Document
+from src.logging_config import logger
 
 
 class RAGAgent:
@@ -14,11 +15,15 @@ class RAGAgent:
 
     def _initialize_rag_pipeline(self):
         """Initialize RAG pipeline with HTML/CSS examples"""
+
+        logger.info("Initializing RAG pipeline with HTML/CSS examples...")
         try:
             # Load HTML/CSS examples
+            logger.info("Loading HTML/CSS examples from ui_examples directory...")
             html_examples = self._load_html_examples()
 
             if not html_examples:
+                logger.warning("No HTML/CSS examples found. RAG pipeline will not be available.")
                 print("Warning: No HTML/CSS examples found. RAG pipeline will not be available.")
                 return
 
@@ -26,11 +31,12 @@ class RAGAgent:
             pinecone_searcher = None
             if os.getenv("PINECONE_API_KEY"):
                 try:
+                    logger.info("Initializing Pinecone searcher for RAG pipeline...")
                     from src.runtime.adapters.pinecone_adapter import PineconeSearcher
 
                     pinecone_searcher = PineconeSearcher(
                         index_name=os.getenv("PINECONE_INDEX", "rag-index"),
-                        model_name=os.getenv("EMBED_MODEL", "sentence-transformers/all-MiniLM-L6-v2"),
+                        model_name=os.getenv("EMBED_MODEL", "text-embedding-ada-002"),
                         cloud=os.getenv("PINECONE_CLOUD", "aws"),
                         region=os.getenv("PINECONE_REGION", "us-east-1"),
                         api_key=os.getenv("PINECONE_API_KEY"),
@@ -40,6 +46,7 @@ class RAGAgent:
                     print(f"Warning: Could not initialize Pinecone: {e}")
 
             # Initialize RAG pipeline
+            logger.info("Creating RAG pipeline...")
             self.rag_pipeline = RagPipeline(
                 docs=html_examples,
                 pinecone_searcher=pinecone_searcher,
@@ -51,8 +58,12 @@ class RAGAgent:
             print(f"RAG pipeline initialized with {len(html_examples)} HTML/CSS examples")
 
         except Exception as e:
+            logger.error(f"Error initializing RAG pipeline: {e}")
             print(f"Error initializing RAG pipeline: {e}")
             self.rag_pipeline = None
+
+    def InitializeRag(self):
+        self._initialize_rag_pipeline()
 
     def _load_html_examples(self) -> list[Document]:
         """
@@ -62,21 +73,24 @@ class RAGAgent:
         documents = []
 
         try:
+            logger.info("Loading HTML examples from ui_examples directory...")
             examples_dir = ui_examples_dir()
+
+            logger.info(f"Examples directory: {examples_dir}")
 
             # Check if examples directory exists
             if not examples_dir.exists():
-                print(f"Creating examples directory: {examples_dir}")
-                examples_dir.mkdir(parents=True, exist_ok=True)
-
-                # Create some sample HTML/CSS examples
-                self._create_sample_examples(examples_dir)
+                raise FileNotFoundError(f"Examples directory not found: {examples_dir}")
 
             # Load HTML files
             html_files = list(examples_dir.glob("**/*.html"))
 
+            logger.info(f"Found {len(html_files)} HTML files.")
+
             for html_file in html_files:
                 try:
+                    logger.info(f"Loading HTML file: {html_file}")
+                    
                     with open(html_file, "r", encoding="utf-8") as f:
                         content = f.read()
 
@@ -94,12 +108,15 @@ class RAGAgent:
 
                 except Exception as e:
                     print(f"Error loading {html_file}: {e}")
+                    logger.error(f"Error loading {html_file}: {e}")
+
 
             print(f"Loaded {len(documents)} HTML examples")
             return documents
 
         except Exception as e:
             print(f"Error loading HTML examples: {e}")
+            logger.error(f"Error loading HTML examples: {e}")
             return []
 
     def invoke(self, visual_analysis: dict[str, Any], top_k: int = 5) -> list[tuple]:
