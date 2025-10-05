@@ -126,3 +126,14 @@ if __name__ == "__main__":
     print(df.to_string(index=False))
     print("\n=== Promedios (macro) por K ===")
     print(agg.to_string(index=False))
+
+    print(f"\nCarpeta de docs_path: {docs_path.parent}")
+    doc_parent_path = docs_path.parent if docs_path else Path.cwd()
+  
+    logger.info(f"Saving results to {doc_parent_path}")
+    df_path  = doc_parent_path / "eval_retrieval_per_query.csv"
+    df.to_csv(df_path, index=False)
+  
+    logger.info(f"Saving aggregated results to {doc_parent_path}")
+    agg_path = doc_parent_path / "eval_retrieval_aggregated.csv"
+    agg.to_csv(agg_path, index=False)
