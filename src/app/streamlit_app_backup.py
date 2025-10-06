@@ -4,19 +4,16 @@ Provides a web interface for RAG queries, UI-to-code from images, and prompt-to-
 """
 
 import streamlit as st
-import sys
+import sys, os, asyncio
 from pathlib import Path
-import os
-import asyncio
 import nest_asyncio
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Any
 from PIL import Image
 
 # Add src to Python path for imports
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from src.agents import rag_agent  # not directly used, but kept if you reference elsewhere
 from src.agents.orchestator_agent.utils import save_analysis_result, save_generated_code
 from src.config import corpus_dir, project_dir, temp_images_dir
 from src.agents.rag_agent.rag_agent import RAGAgent
@@ -26,6 +23,7 @@ nest_asyncio.apply()
 
 
 # ----------------------------- RAG PIPELINE ----------------------------- #
+
 
 @st.cache_resource
 def get_rag_pipeline():
@@ -84,7 +82,7 @@ def query_rag_system(
     top_retrieve: int = 30,
     use_reranking: bool = True,
     include_summary: bool = True,
-    meta_filter: Optional[Dict[str, Any]] = None,
+    meta_filter: Optional[dict[str, Any]] = None,
     pipeline=None,
 ):
     """
@@ -161,6 +159,7 @@ def get_system_status(pipeline=None):
         if corpus_exists:
             try:
                 from src.rag.ingestion.pdf_loader import folder_pdfs_to_documents
+
                 docs = folder_pdfs_to_documents(corpus_path, recursive=True)
                 total_docs = len(docs)
 
@@ -226,6 +225,7 @@ def get_system_status(pipeline=None):
 
 # --------------------------- AGENT INITIALIZERS --------------------------- #
 
+
 @st.cache_resource
 def initilize_orchestator_agent() -> OrchestratorAgent:
     """
@@ -254,6 +254,7 @@ def initilize_rag_agent():
 
 
 # ---------------------------- UI-TO-CODE (IMAGE) --------------------------- #
+
 
 def ui_to_code_page():
     """UI-to-Code page for converting UI designs (image) to HTML/Tailwind."""
@@ -440,6 +441,7 @@ def ui_to_code_page():
 
 # ------------------------------- MAIN APP ------------------------------- #
 
+
 def main():
     """Main Streamlit application."""
     st.set_page_config(
@@ -489,7 +491,7 @@ def main():
                 top_retrieve = st.slider("Candidates to retrieve", 10, 100, 30)
                 use_reranking = st.checkbox("Use re-ranking", value=True)
                 include_summary = st.checkbox("Include summary", value=True)
-                prompt_custom_instructions = ""   # keep var defined for later reference
+                prompt_custom_instructions = ""  # keep var defined for later reference
                 save_results_prompt = False
             else:
                 # Prompt → HTML options
@@ -656,9 +658,7 @@ def main():
             with c2:
                 st.metric("Total Chunks", corpus["total_chunks"])
             with c3:
-                avg_chunks = (
-                    corpus["total_chunks"] / corpus["total_documents"] if corpus["total_documents"] > 0 else 0
-                )
+                avg_chunks = corpus["total_chunks"] / corpus["total_documents"] if corpus["total_documents"] > 0 else 0
                 st.metric("Avg Chunks per Doc", f"{avg_chunks:.1f}")
 
             st.markdown("### Document Details")

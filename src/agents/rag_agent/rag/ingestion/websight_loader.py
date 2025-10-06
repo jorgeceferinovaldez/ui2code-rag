@@ -1,52 +1,44 @@
-"""
-WebSight Dataset Loader for HTML/CSS Examples
-Loads and processes the WebSight dataset for UI-to-Code RAG system
-"""
-
-import json
-import os
-from typing import List, Dict, Any, Optional
-from pathlib import Path
+import json, argparse
+from typing import Any
 from datetime import datetime
+from loguru import logger
 
-from src.config import websight_data_dir, ui_examples_dir, project_dir, websight_data_file_name
-from src.rag.core.documents import Document
-from src.logging_config import logger
-import argparse
-
+# Local dependencies
+from src.config import websight_data_dir, ui_examples_dir, websight_data_file_name
+from ..core.documents import Document
 
 
 class WebSightLoader:
     """
     Loader for WebSight dataset - converts UI screenshots to HTML/CSS examples
     """
-    
+
     def __init__(self):
         """Initialize WebSight loader"""
         logger.info("Initializing WebSightLoader...")
         self.websight_dir = websight_data_dir()
         self.websight_data_file = websight_data_file_name
         self.examples_dir = ui_examples_dir()
-        
+
         # Ensure directories exist
         self.websight_dir.mkdir(parents=True, exist_ok=True)
         self.examples_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"WebSight data dir: {self.websight_dir}")
         logger.info(f"UI examples dir: {self.examples_dir}")
 
-    def load_websight_subset(self, max_examples: int = 1000) -> List[Dict[str, Any]]:
+    def load_websight_subset(self, max_examples: int = 1000) -> list[dict[str, Any]]:
         logger.info(f"Loading WebSight subset (max {max_examples})...")
         try:
             cache_file = self.websight_dir / "websight_cache.json"
             if cache_file.exists():
                 logger.info("Loading WebSight data from cache...")
-                with open(cache_file, 'r', encoding='utf-8') as f:
+                with open(cache_file, "r", encoding="utf-8") as f:
                     cached_data = json.load(f)
                 logger.info(f"Loaded {len(cached_data)} cached examples.")
                 return cached_data[:max_examples]
             logger.info("Creating sample WebSight-style data...")
             sample_data = self._create_sample_websight_data(max_examples)
-            with open(cache_file, 'w', encoding='utf-8') as f:
+            with open(cache_file, "w", encoding="utf-8") as f:
                 json.dump(sample_data, f, indent=2)
             logger.info(f"Sample data created and cached ({len(sample_data)} examples).")
             return sample_data
@@ -102,13 +94,13 @@ class WebSightLoader:
                 </section>
             </main>
         </body>
-        </html>"""
-                    },
-                    {
-                        "type": "contact_form",
-                        "description": "Contact form with validation and modern styling",
-                        "components": ["form", "input", "textarea", "button", "validation"],
-                        "html": """<!DOCTYPE html>
+        </html>""",
+            },
+            {
+                "type": "contact_form",
+                "description": "Contact form with validation and modern styling",
+                "components": ["form", "input", "textarea", "button", "validation"],
+                "html": """<!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
@@ -146,13 +138,13 @@ class WebSightLoader:
                 </form>
             </div>
         </body>
-        </html>"""
-                    },
-                    {
-                        "type": "dashboard",
-                        "description": "Admin dashboard with sidebar, stats cards, and data tables",
-                        "components": ["sidebar", "nav", "cards", "table", "metrics"],
-                        "html": """<!DOCTYPE html>
+        </html>""",
+            },
+            {
+                "type": "dashboard",
+                "description": "Admin dashboard with sidebar, stats cards, and data tables",
+                "components": ["sidebar", "nav", "cards", "table", "metrics"],
+                "html": """<!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
@@ -227,13 +219,13 @@ class WebSightLoader:
                 </main>
             </div>
         </body>
-        </html>"""
-                    },
-                    {
-                        "type": "ecommerce_card",
-                        "description": "Product card for e-commerce with image, price, and actions",
-                        "components": ["card", "image", "price", "button", "rating"],
-                        "html": """<!DOCTYPE html>
+        </html>""",
+            },
+            {
+                "type": "ecommerce_card",
+                "description": "Product card for e-commerce with image, price, and actions",
+                "components": ["card", "image", "price", "button", "rating"],
+                "html": """<!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
@@ -276,13 +268,13 @@ class WebSightLoader:
                 </div>
             </div>
         </body>
-        </html>"""
-                    },
-                    {
-                        "type": "blog_post",
-                        "description": "Blog post layout with header, content, and sidebar",
-                        "components": ["article", "header", "sidebar", "typography", "navigation"],
-                        "html": """<!DOCTYPE html>
+        </html>""",
+            },
+            {
+                "type": "blog_post",
+                "description": "Blog post layout with header, content, and sidebar",
+                "components": ["article", "header", "sidebar", "typography", "navigation"],
+                "html": """<!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
@@ -363,19 +355,19 @@ class WebSightLoader:
                 </div>
             </div>
         </body>
-        </html>"""
-                    }
-                ]
-        
+        </html>""",
+            },
+        ]
+
         return sample_templates
-    
-    def _get_sample_html_templates(self) -> List[str]:
+
+    def _get_sample_html_templates(self) -> list[str]:
         logger.info("Getting sample HTML templates from files...")
         html_samples = []
         # Recorrer los archivos JSON con el prefijo en el directorio websight_dir
-        
+
         logger.info(f"Looking for files with prefix: {self.websight_data_file} in {self.websight_dir}")
-        
+
         for file in self.websight_dir.glob(f"{self.websight_data_file}*.json"):
             logger.info(f"Reading file: {file}")
             try:
@@ -388,10 +380,10 @@ class WebSightLoader:
                     description = row.get("llm_generated_idea", "")
                     if html_text:
                         html = {
-                        "type": "ecommerce_card",
-                        "description": description,
-                        "components": ["card", "image", "price", "button", "rating"],
-                        "html": html_text
+                            "type": "ecommerce_card",
+                            "description": description,
+                            "components": ["card", "image", "price", "button", "rating"],
+                            "html": html_text,
                         }
                         html_samples.append(html)
 
@@ -401,15 +393,15 @@ class WebSightLoader:
         logger.info(f"Total HTML samples found: {len(html_samples)}")
         return html_samples
 
-    def _create_sample_websight_data(self, num_samples: int) -> List[Dict[str, Any]]:
+    def _create_sample_websight_data(self, num_samples: int) -> list[dict[str, Any]]:
         logger.info(f"Creating {num_samples} sample WebSight data entries...")
         sample_templates = self._get_sample_html_templates()
-        
+
         if not sample_templates:
             logger.info("No sample templates found in files, using fixed samples.")
             sample_templates = self._get_fixed_sample_html()
         samples = []
-        
+
         for i in range(min(num_samples, len(sample_templates) * 5)):
             template_idx = i % len(sample_templates)
             template = sample_templates[template_idx]
@@ -423,8 +415,8 @@ class WebSightLoader:
                     "description": template["description"],
                     "components": [],
                     "created_at": datetime.now().isoformat(),
-                    "source": "websight_dataset"
-                }
+                    "source": "websight_dataset",
+                },
             }
             samples.append(sample)
         logger.info(f"Created {len(samples)} sample entries.")
@@ -434,16 +426,18 @@ class WebSightLoader:
         logger.debug("Extracting text from HTML...")
         try:
             from bs4 import BeautifulSoup
-            soup = BeautifulSoup(html, 'html.parser')
-            return soup.get_text(separator=' ', strip=True)
+
+            soup = BeautifulSoup(html, "html.parser")
+            return soup.get_text(separator=" ", strip=True)
         except ImportError:
             logger.warning("BeautifulSoup not installed, using regex fallback.")
             import re
-            text = re.sub(r'<[^>]+>', ' ', html)
-            text = re.sub(r'\s+', ' ', text)
+
+            text = re.sub(r"<[^>]+>", " ", html)
+            text = re.sub(r"\s+", " ", text)
             return text.strip()
 
-    def websight_to_documents(self, websight_data: List[Dict[str, Any]]) -> List[Document]:
+    def websight_to_documents(self, websight_data: list[dict[str, Any]]) -> list[Document]:
         logger.info(f"Converting {len(websight_data)} WebSight entries to Document objects...")
         documents = []
         for entry in websight_data:
@@ -451,11 +445,7 @@ class WebSightLoader:
                 search_text = self._create_search_text(entry)
                 metadata_text = f"Type: {entry['metadata']['type']} | Description: {entry['metadata']['description']} | Components: {', '.join(entry['metadata']['components'])}"
                 full_text = f"{metadata_text} | {search_text}"
-                doc = Document(
-                    id=entry["id"],
-                    text=full_text,
-                    source=f"websight:{entry['id']}"
-                )
+                doc = Document(id=entry["id"], text=full_text, source=f"websight:{entry['id']}")
                 doc.websight_id = entry["id"]
                 doc.url = entry.get("url", "unknown")
                 doc.html_code = entry["html"]
@@ -471,90 +461,96 @@ class WebSightLoader:
                 continue
         logger.info(f"Converted {len(documents)} documents.")
         return documents
-    
-    def _create_search_text(self, entry: Dict[str, Any]) -> str:
+
+    def _create_search_text(self, entry: dict[str, Any]) -> str:
         """Create searchable text from WebSight entry"""
         parts = []
-        
+
         # Add metadata description
         if "metadata" in entry and "description" in entry["metadata"]:
             parts.append(f"Description: {entry['metadata']['description']}")
-        
+
         # Add components
         if "metadata" in entry and "components" in entry["metadata"]:
             components = entry["metadata"]["components"]
             parts.append(f"UI Components: {', '.join(components)}")
-        
+
         # Add type
         if "metadata" in entry and "type" in entry["metadata"]:
             parts.append(f"Type: {entry['metadata']['type']}")
-        
+
         # Add extracted text from HTML
         if "text" in entry:
             parts.append(f"Content: {entry['text'][:500]}...")  # Limit content length
-        
+
         # Add HTML structure information
         html = entry.get("html", "")
         html_keywords = self._extract_html_keywords(html)
         if html_keywords:
             parts.append(f"HTML Elements: {', '.join(html_keywords)}")
-        
+
         return " | ".join(parts)
-    
-    def _extract_html_keywords(self, html: str) -> List[str]:
+
+    def _extract_html_keywords(self, html: str) -> list[str]:
         """Extract important HTML elements and classes for search"""
         import re
-        
+
         keywords = set()
-        
+
         # Extract HTML tags
-        tags = re.findall(r'<(\w+)', html)
+        tags = re.findall(r"<(\w+)", html)
         keywords.update(tags)
-        
+
         # Extract class names
         classes = re.findall(r'class="([^"]*)"', html)
         for class_list in classes:
             class_names = class_list.split()
             # Add only meaningful Tailwind classes
-            meaningful_classes = [c for c in class_names if any(prefix in c for prefix in 
-                                ['bg-', 'text-', 'p-', 'm-', 'w-', 'h-', 'flex', 'grid', 'rounded', 'shadow'])]
+            meaningful_classes = [
+                c
+                for c in class_names
+                if any(
+                    prefix in c
+                    for prefix in ["bg-", "text-", "p-", "m-", "w-", "h-", "flex", "grid", "rounded", "shadow"]
+                )
+            ]
             keywords.update(meaningful_classes[:5])  # Limit to 5 most relevant classes
-        
+
         return list(keywords)
-    
-    def save_html_examples(self, documents: List[Document]) -> int:
+
+    def save_html_examples(self, documents: list[Document]) -> int:
         logger.info(f"Saving {len(documents)} HTML examples to {self.examples_dir}...")
         saved_count = 0
         for doc in documents:
             try:
                 # Get filename from document attributes
-                filename = getattr(doc, 'filename', f"{doc.id}.html")
-                if not filename.endswith('.html'):
-                    filename += '.html'
-                
+                filename = getattr(doc, "filename", f"{doc.id}.html")
+                if not filename.endswith(".html"):
+                    filename += ".html"
+
                 # Save HTML file
                 file_path = self.examples_dir / filename
-                
-                html_code = getattr(doc, 'html_code', '')
+
+                html_code = getattr(doc, "html_code", "")
                 if html_code:
-                    with open(file_path, 'w', encoding='utf-8') as f:
+                    with open(file_path, "w", encoding="utf-8") as f:
                         f.write(html_code)
                     saved_count += 1
-                    
+
                     # Save metadata
-                    metadata_path = file_path.with_suffix('.json')
+                    metadata_path = file_path.with_suffix(".json")
                     metadata = {
-                        "websight_id": getattr(doc, 'websight_id', doc.id),
-                        "url": getattr(doc, 'url', 'unknown'),
-                        "type": getattr(doc, 'doc_type', 'unknown'),
-                        "description": getattr(doc, 'description', ''),
-                        "components": getattr(doc, 'components', []),
-                        "created_at": getattr(doc, 'created_at', ''),
-                        "source_type": getattr(doc, 'source_type', 'websight'),
+                        "websight_id": getattr(doc, "websight_id", doc.id),
+                        "url": getattr(doc, "url", "unknown"),
+                        "type": getattr(doc, "doc_type", "unknown"),
+                        "description": getattr(doc, "description", ""),
+                        "components": getattr(doc, "components", []),
+                        "created_at": getattr(doc, "created_at", ""),
+                        "source_type": getattr(doc, "source_type", "websight"),
                         "search_text": doc.text,
-                        "saved_at": datetime.now().isoformat()
+                        "saved_at": datetime.now().isoformat(),
                     }
-                    with open(metadata_path, 'w', encoding='utf-8') as f:
+                    with open(metadata_path, "w", encoding="utf-8") as f:
                         json.dump(metadata, f, indent=2)
                     logger.debug(f"Saved HTML and metadata for {doc.id}")
             except Exception as e:
@@ -562,7 +558,7 @@ class WebSightLoader:
         logger.info(f"Saved {saved_count} HTML examples.")
         return saved_count
 
-    def load_full_websight_pipeline(self, max_examples: int = 1000) -> List[Document]:
+    def load_full_websight_pipeline(self, max_examples: int = 1000) -> list[Document]:
         logger.info(f"Starting full WebSight pipeline (max {max_examples})...")
         try:
             websight_data = self.load_websight_subset(max_examples)
@@ -579,15 +575,15 @@ class WebSightLoader:
             return []
 
 
-def load_websight_documents(max_examples: int = 1000) -> List[Document]:
+def load_websight_documents(max_examples: int = 1000) -> list[Document]:
     """
     Convenience function to load WebSight documents
-    
+
     Args:
         max_examples: Maximum number of examples to load
-        
+
     Returns:
-        List of Document objects
+        list of Document objects
     """
     loader = WebSightLoader()
     return loader.load_full_websight_pipeline(max_examples)
@@ -597,16 +593,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Load WebSight documents")
     parser.add_argument("--max-examples", type=int, default=1000, help="Maximum number of examples to load")
     args = parser.parse_args()
-    
+
     logger.info(f"Running as __main__ with max_examples={args.max_examples}")
     docs = load_websight_documents(max_examples=args.max_examples)
     logger.info(f"Loaded {len(docs)} WebSight documents.")
-    
+
     print(f"Loaded {len(docs)} WebSight documents.")
-
-
-
-
-
-
-    

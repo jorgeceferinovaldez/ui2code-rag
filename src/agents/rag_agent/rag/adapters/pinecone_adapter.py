@@ -1,11 +1,6 @@
-"""
-Pinecone Vector Database Adapter
-Migrated from raglib.vector_pinecone with path-aware configuration
-"""
-
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Optional
+from typing import Optional
 import os
 
 try:
@@ -13,8 +8,7 @@ try:
     from pinecone import Pinecone, ServerlessSpec
 except ImportError as e:
     raise ImportError(
-        "Required dependencies not found. Install with:\n"
-        "pip install sentence-transformers pinecone-client"
+        "Required dependencies not found. Install with:\n" "pip install sentence-transformers pinecone-client"
     ) from e
 
 
@@ -24,7 +18,7 @@ def make_chunk_id(doc_id: str, local_idx: int) -> str:
     return f"{doc_id}::chunk_{local_idx}"
 
 
-def parse_chunk_id(chunk_id: str) -> Tuple[str, int]:
+def parse_chunk_id(chunk_id: str) -> tuple[str, int]:
     """Parse chunk ID to get document ID and local index"""
     doc_id, rest = chunk_id.split("::", 1)
     i = int(rest.replace("chunk_", ""))
@@ -56,6 +50,7 @@ class PineconeSearcher:
     Maneja embeddings + upsert + query sobre Pinecone.
     Guarda registro local (chunk_id -> meta) para mapear resultados a texto y metadatos.
     """
+
     index_name: str
     model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
     cloud: str = "aws"
@@ -68,15 +63,15 @@ class PineconeSearcher:
         key = self.api_key or os.getenv("PINECONE_API_KEY")
         if not key:
             raise RuntimeError("Falta PINECONE_API_KEY en entorno o parámetro api_key.")
-        
+
         self.pc = Pinecone(api_key=key)
         self.model = SentenceTransformer(self.model_name)
         dim = self.model.get_sentence_embedding_dimension()
         ensure_pinecone_index(self.pc, self.index_name, dim, cloud=self.cloud, region=self.region)
         self.index = self.pc.Index(self.index_name)
-        
+
         # registro local: chunk_id -> dict(text, doc_id, local_idx, source, page)
-        self.registry: Dict[str, Dict] = {}
+        self.registry: dict[str, dict] = {}
 
     def _ns_vector_count(self) -> int:
         """Cantidad de vectores en la namespace actual."""
@@ -110,7 +105,7 @@ class PineconeSearcher:
             # No detengas la ejecución por esto; sólo avisa
             print(f"[WARN] clear_namespace saltado: {e}")
 
-    def upsert_chunks(self, chunks_per_doc: Dict[str, List[str]], docs_meta: Dict[str, Dict]):
+    def upsert_chunks(self, chunks_per_doc: dict[str, list[str]], docs_meta: dict[str, dict]):
         """Upload chunks to Pinecone with embeddings"""
         vectors = []
         for doc_id, chunks in chunks_per_doc.items():
@@ -133,26 +128,28 @@ class PineconeSearcher:
                 self.registry[chunk_id] = meta
                 vectors.append({"id": chunk_id, "values": v.tolist(), "metadata": meta})
 
-        print(f"[UPSERT] index={self.index_name} ns={self.namespace} vectors={len(vectors)} (antes={self._ns_vector_count()})")
+        print(
+            f"[UPSERT] index={self.index_name} ns={self.namespace} vectors={len(vectors)} (antes={self._ns_vector_count()})"
+        )
         B = 100
         for i in range(0, len(vectors), B):
-            self.index.upsert(vectors=vectors[i:i+B], namespace=self.namespace)
+            self.index.upsert(vectors=vectors[i : i + B], namespace=self.namespace)
         print(f"[UPSERT] después={self._ns_vector_count()} en ns={self.namespace}")
 
-    def search(self, query: str, top_k: int = 50, meta_filter: Optional[dict] = None) -> List[Tuple[str, float, Dict]]:
+    def search(self, query: str, top_k: int = 50, meta_filter: Optional[dict] = None) -> list[tuple[str, float, dict]]:
         """
         Search for similar chunks
-        
+
         Returns:
-            List of (chunk_id, score, metadata) tuples, score higher = more similar
+            list of (chunk_id, score, metadata) tuples, score higher = more similar
         """
         q = self.model.encode([query], convert_to_numpy=True, normalize_embeddings=True)[0].tolist()
         res = self.index.query(
             vector=q,
             top_k=top_k,
             include_metadata=True,
-            namespace=self.namespace,     # usamos namespace
-            filter=meta_filter,           # opcional: filtrar por source/page/etc.
+            namespace=self.namespace,  # usamos namespace
+            filter=meta_filter,  # opcional: filtrar por source/page/etc.
         )
         out = []
         for m in res.matches:

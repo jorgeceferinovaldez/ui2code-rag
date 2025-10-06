@@ -1,21 +1,12 @@
-"""
-RAG Pipeline - Core implementation
-Migrated from raglib.pipeline with path-aware configuration
-"""
+from typing import Optional
 
-from typing import Dict, List, Tuple, Optional
-import sys
-from pathlib import Path
-
-# Add src to path
-sys.path.append(str(Path(__file__).parent.parent.parent))
-
-from src.rag.core.documents import Document, chunk_text,chunk_html_semantic_with_tags
-from src.rag.retrievers.bm25_retriever import BM25Index
-from src.rag.retrievers.cross_encoder_reranker import CrossEncoderReranker
-from src.rag.retrievers.fusion import rrf_combine
-from src.runtime.adapters.pinecone_adapter import PineconeSearcher, make_chunk_id, parse_chunk_id
-from src.rag.core.rag_summary import generar_rag_summary
+# Local dependencies
+from ..adapters.pinecone_adapter import PineconeSearcher, make_chunk_id, parse_chunk_id
+from .documents import Document, chunk_html_semantic_with_tags
+from .rag_summary import generar_rag_summary
+from ..retrievers.bm25_retriever import BM25Index
+from ..retrievers.cross_encoder_reranker import CrossEncoderReranker
+from ..retrievers.fusion import rrf_combine
 
 
 class RagPipeline:
@@ -25,7 +16,7 @@ class RagPipeline:
 
     def __init__(
         self,
-        docs: List[Document],
+        docs: list[Document],
         pinecone_searcher: Optional[PineconeSearcher] = None,
         max_tokens_chunk: int = 400,
         overlap: int = 100,
@@ -38,7 +29,7 @@ class RagPipeline:
         self.doc_list = docs
 
         # Chunking con fallback (no perder páginas cortas)
-        self.chunks_per_doc: Dict[str, List[str]] = {}
+        self.chunks_per_doc: dict[str, list[str]] = {}
         for d in docs:
             chunks = chunk_html_semantic_with_tags(d.text, max_tokens_chunk, overlap)
             if not chunks:
@@ -55,7 +46,7 @@ class RagPipeline:
         # Índice BM25 (sobre los mismos chunks)
         self.bm25 = BM25Index(docs, self.chunks_per_doc)
 
-        # Vector search 
+        # Vector search
         self.vec = pinecone_searcher
         if self.vec is not None and do_upsert:
             # Ensure metadata values are not None (Pinecone requirement)
@@ -71,8 +62,8 @@ class RagPipeline:
         self.reranker = CrossEncoderReranker(model_name=ce_model, device=device)
 
         # Índices globales (para mapear BM25 -> (doc_id, idx_local))
-        self.global_chunks: List[str] = []
-        self.global_map: List[Tuple[str, int]] = []
+        self.global_chunks: list[str] = []
+        self.global_map: list[tuple[str, int]] = []
         for d in docs:
             for i, ch in enumerate(self.chunks_per_doc[d.id]):
                 self.global_chunks.append(ch)
@@ -83,18 +74,18 @@ class RagPipeline:
         query: str,
         top_k: int = 50,
         meta_filter: Optional[dict] = None,
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Devuelve lista de chunk_ids (doc_id::chunk_i) por ranking fusionado.
         """
         # BM25
-        bm25_hits: List[str] = []
+        bm25_hits: list[str] = []
         for gi, _score in self.bm25.search(query, top_k=top_k):
             doc_id, local_i = self.global_map[gi]
             bm25_hits.append(make_chunk_id(doc_id, local_i))
 
         # Vector
-        vec_hits: List[str] = []
+        vec_hits: list[str] = []
         if self.vec is not None:
             vec_res = self.vec.search(query, top_k=top_k, meta_filter=meta_filter)
             vec_hits = [cid for (cid, _s, _m) in vec_res]
@@ -113,13 +104,13 @@ class RagPipeline:
         top_k: int = 20,
         per_doc_cap: int = 2,
         meta_filter: Optional[dict] = None,
-    ) -> List[Tuple[str, str, Dict]]:
+    ) -> list[tuple[str, str, dict]]:
         """
         Devuelve [(doc_id, chunk_text, meta)] con límite por documento para favorecer diversidad.
         """
         cids = self.retrieve_hybrid(query, top_k=top_k * 3, meta_filter=meta_filter)
-        out: List[Tuple[str, str, Dict]] = []
-        seen: Dict[str, int] = {}
+        out: list[tuple[str, str, dict]] = []
+        seen: dict[str, int] = {}
         for cid in cids:
             doc_id, local_i = parse_chunk_id(cid)
             seen[doc_id] = seen.get(doc_id, 0)
@@ -146,7 +137,7 @@ class RagPipeline:
         reranked = self.reranker.rerank(query, cand)
         return reranked[:top_final]
 
-    def build_summary_context(self, reranked: List[Tuple[str, str, Dict, float]]) -> str:
+    def build_summary_context(self, reranked: list[tuple[str, str, dict, float]]) -> str:
         """Build summary context using LLM"""
         docs = []
         for _, chunk, meta, _ in reranked:
@@ -162,12 +153,11 @@ class RagPipeline:
             return generar_rag_summary(docs)
         except Exception:
             return "\n\n---\n\n".join(
-                f"{d['text']}\n[{d['source']}" + (f", p. {d['page']}]" if d.get("page") else "]")
-                for d in docs
+                f"{d['text']}\n[{d['source']}" + (f", p. {d['page']}]" if d.get("page") else "]") for d in docs
             )
 
     @staticmethod
-    def build_cited_context(reranked: List[Tuple[str, str, Dict, float]]) -> str:
+    def build_cited_context(reranked: list[tuple[str, str, dict, float]]) -> str:
         """Build context with citations"""
         lines = []
         for _, chunk, meta, _ in reranked:
@@ -178,7 +168,7 @@ class RagPipeline:
         return "\n\n---\n\n".join(lines)
 
     @staticmethod
-    def format_citation(meta: Dict) -> str:
+    def format_citation(meta: dict) -> str:
         """Format citation from metadata"""
         src = meta.get("source") or meta.get("doc_id")
         page = meta.get("page")

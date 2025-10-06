@@ -2,10 +2,12 @@
 
 import os
 from typing import Any
+from loguru import logger
+
+# Local dependencies
+from .rag.core.documents import Document
+from .rag.core.rag_pipeline import RagPipeline
 from src.config import ui_examples_dir
-from src.rag.core.rag_pipeline import RagPipeline
-from src.rag.core.documents import Document
-from src.logging_config import logger
 
 
 class RAGAgent:
@@ -32,7 +34,7 @@ class RAGAgent:
             if os.getenv("PINECONE_API_KEY"):
                 try:
                     logger.info("Initializing Pinecone searcher for RAG pipeline...")
-                    from src.runtime.adapters.pinecone_adapter import PineconeSearcher
+                    from .rag.adapters.pinecone_adapter import PineconeSearcher
 
                     pinecone_searcher = PineconeSearcher(
                         index_name=os.getenv("PINECONE_INDEX", "rag-index"),
@@ -90,7 +92,7 @@ class RAGAgent:
             for html_file in html_files:
                 try:
                     logger.info(f"Loading HTML file: {html_file}")
-                    
+
                     with open(html_file, "r", encoding="utf-8") as f:
                         content = f.read()
 
@@ -109,7 +111,6 @@ class RAGAgent:
                 except Exception as e:
                     print(f"Error loading {html_file}: {e}")
                     logger.error(f"Error loading {html_file}: {e}")
-
 
             print(f"Loaded {len(documents)} HTML examples")
             return documents

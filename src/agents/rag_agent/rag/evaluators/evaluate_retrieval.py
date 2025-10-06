@@ -1,21 +1,19 @@
-import argparse
-import os
+import argparse, os
 from pathlib import Path
 import pandas as pd
-from dotenv import load_dotenv
+from loguru import logger
 
-from src.rag.core.rag_pipeline import RagPipeline
-from src.rag.core.metrics import precision_at_k, recall_at_k, ndcg_at_k, mrr
-from src.rag.core.io_utils import load_docs_jsonl, load_qrels_csv
-from src.runtime.adapters.pinecone_adapter import PineconeSearcher
+# Local dependencies
+from src.config import project_dir
+from ..adapters.pinecone_adapter import PineconeSearcher
+from ..core.io_utils import load_docs_jsonl, load_qrels_csv
+from ..core.metrics import mrr, ndcg_at_k, precision_at_k, recall_at_k
+from ..core.rag_pipeline import RagPipeline
 
-from logging_config import logger
 
-# resolver rutas relativas a la raíz del proyecto 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
 def resolve_path(p: str) -> Path:
     pp = Path(p)
-    return pp if pp.is_absolute() else (PROJECT_ROOT / pp)
+    return pp if pp.is_absolute() else (project_dir / pp)
 
 
 def evaluate(pipeline: RagPipeline, qrels, ks=(5, 10), top_retrieve=50, top_final=10):
@@ -42,26 +40,28 @@ def evaluate(pipeline: RagPipeline, qrels, ks=(5, 10), top_retrieve=50, top_fina
         # Métricas por cada K
         logger.debug(f"Calculating metrics for query: {query}")
         for k in ks:
-            rows.append({
-                "query": query, "k": k,
-                "precision_pre":  precision_at_k(pre_ids,  rel_ids, k),
-                "recall_pre":     recall_at_k(pre_ids,     rel_ids, k),
-                "ndcg_pre":       ndcg_at_k(pre_ids,       rel_ids, k),
-                "precision_post": precision_at_k(post_ids, rel_ids, k),
-                "recall_post":    recall_at_k(post_ids,    rel_ids, k),
-                "ndcg_post":      ndcg_at_k(post_ids,      rel_ids, k),
-                "mrr_pre":        mrr(pre_ids,  rel_ids),
-                "mrr_post":       mrr(post_ids, rel_ids),
-            })
+            rows.append(
+                {
+                    "query": query,
+                    "k": k,
+                    "precision_pre": precision_at_k(pre_ids, rel_ids, k),
+                    "recall_pre": recall_at_k(pre_ids, rel_ids, k),
+                    "ndcg_pre": ndcg_at_k(pre_ids, rel_ids, k),
+                    "precision_post": precision_at_k(post_ids, rel_ids, k),
+                    "recall_post": recall_at_k(post_ids, rel_ids, k),
+                    "ndcg_post": ndcg_at_k(post_ids, rel_ids, k),
+                    "mrr_pre": mrr(pre_ids, rel_ids),
+                    "mrr_post": mrr(post_ids, rel_ids),
+                }
+            )
     df = pd.DataFrame(rows)
     agg = df.groupby("k").mean(numeric_only=True).reset_index()
     return df, agg
 
 
 if __name__ == "__main__":
-    load_dotenv()  # lee .env en la raíz
 
-    logger.info(f"Project root: {PROJECT_ROOT}")
+    logger.info(f"Project root: {project_dir}")
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--docs", type=str, default="", help="data/docs_sample_en.jsonl")
@@ -77,17 +77,16 @@ if __name__ == "__main__":
 
     # Resolver y verificar rutas
     logger.info("Loading documents and qrels...")
-    docs_path  = resolve_path(args.docs)  if args.docs  else None
+    docs_path = resolve_path(args.docs) if args.docs else None
     qrels_path = resolve_path(args.qrels) if args.qrels else None
     logger.info(f"Resolved docs path : {docs_path}")
     logger.info(f"Resolved qrels path: {qrels_path}")
-
 
     if docs_path and qrels_path and docs_path.exists() and qrels_path.exists():
         logger.info("Found valid docs and qrels files.")
         logger.info(f"Loading documents from: {docs_path}")
         logger.info(f"Loading qrels from: {qrels_path}")
-        docs  = load_docs_jsonl(docs_path)
+        docs = load_docs_jsonl(docs_path)
         qrels = load_qrels_csv(qrels_path)
     else:
         logger.error("No se encontraron archivos válidos para docs o qrels.")
@@ -107,21 +106,21 @@ if __name__ == "__main__":
     searcher.clear_namespace()  # la primera vez dirá “no existe”; es normal
 
     # Construir pipeline
-    logger.info("Building RAG pipeline...")    
+    logger.info("Building RAG pipeline...")
     pipeline = RagPipeline(
         docs=docs,
         pinecone_searcher=searcher,
         max_tokens_chunk=120,
         overlap=30,
         ce_model="cross-encoder/ms-marco-MiniLM-L-6-v2",
-        device=args.device
+        device=args.device,
     )
 
     # Ejecutar evaluación
     logger.info("Starting evaluation...")
     df, agg = evaluate(pipeline, qrels, ks=ks, top_retrieve=args.top_retrieve, top_final=args.top_final)
     logger.info("Evaluation completed.")
-    
+
     print("\n=== Métricas por query y K ===")
     print(df.to_string(index=False))
     print("\n=== Promedios (macro) por K ===")
@@ -129,11 +128,11 @@ if __name__ == "__main__":
 
     print(f"\nCarpeta de docs_path: {docs_path.parent}")
     doc_parent_path = docs_path.parent if docs_path else Path.cwd()
-  
+
     logger.info(f"Saving results to {doc_parent_path}")
-    df_path  = doc_parent_path / "eval_retrieval_per_query.csv"
+    df_path = doc_parent_path / "eval_retrieval_per_query.csv"
     df.to_csv(df_path, index=False)
-  
+
     logger.info(f"Saving aggregated results to {doc_parent_path}")
     agg_path = doc_parent_path / "eval_retrieval_aggregated.csv"
     agg.to_csv(agg_path, index=False)

@@ -13,7 +13,8 @@ rag:
 
 # Application paths
 app:
-  main_file: "app/streamlit_app.py"
+  main_file: "src/app/streamlit_app.py"
+  streamlit_port: 8501
 
 # Source code structure
 src:
@@ -52,3 +53,10 @@ files:
 agents_endpoints:
   visual_agent_url: "http://localhost:10000"
   code_agent_url: "http://localhost:10001"
+
+pinecone:
+  index: "rag-index"
+  model_name: "sentence-transformers/all-MiniLM-L6-v2"
+  cloud: "aws"
+  region: "us-east-1"
+  namespace: "default"

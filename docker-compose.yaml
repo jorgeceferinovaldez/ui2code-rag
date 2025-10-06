@@ -3,11 +3,11 @@ name: NLP3
 services:
   code-agent:
     build:
-      context: ./src/agents/code_agent
+      context: ./src/agents/code_a2a_agent
       dockerfile: Dockerfile
     container_name: code-agent
     env_file:
-      - ./src/agents/code_agent/.env
+      - ./src/agents/code_a2a_agent/.env
     ports:
       - "10001:10001"
     restart: unless-stopped
@@ -16,11 +16,11 @@ services:
 
   visual-agent:
     build:
-      context: ./src/agents/visual_agent
+      context: ./src/agents/visual_a2a_agent
       dockerfile: Dockerfile
     container_name: visual-agent
     env_file:
-      - ./src/agents/visual_agent/.env
+      - ./src/agents/visual_a2a_agent/.env
     ports:
       - "10000:10000"
     restart: unless-stopped

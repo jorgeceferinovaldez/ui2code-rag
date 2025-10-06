@@ -20,6 +20,7 @@ from a2a.utils import get_message_text, get_text_parts
 from PIL import Image
 from io import BytesIO
 
+# Local dependencies
 from src.agents.rag_agent.rag_agent import RAGAgent
 from src.config import visual_agent_url, code_agent_url
 

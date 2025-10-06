@@ -1,37 +1,24 @@
-"""
-PDF Loader - Document ingestion from PDF files
-Migrated from raglib.loader_pdfs with path-aware configuration
-"""
-
 from pathlib import Path
-from typing import List, Dict
-import re
-import unicodedata
-from typing import Iterable, Tuple
-import sys
+import re, unicodedata
+from typing import Iterable
 
-# Add src to path
-sys.path.append(str(Path(__file__).parent.parent.parent))
-
-from src.rag.core.documents import Document, chunk_text
+# Local dependencies
+from ..core.documents import Document, chunk_text
 
 # Librería para leer PDFs
 try:
     import pdfplumber
 except Exception as e:
-    raise RuntimeError(
-        "Para usar pdf_loader necesitás instalar pdfplumber:\n"
-        "   pip install pdfplumber\n"
-    ) from e
+    raise RuntimeError("Para usar pdf_loader necesitás instalar pdfplumber:\n" "   pip install pdfplumber\n") from e
 
 
 _NONWORD = re.compile(r"[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9.,;:?!¿¡()\"'–—\-/%\[\]<> ]")
-_MANY_SYMBOLS = re.compile(r"[^\w\s]{3,}")           # secuencias largas de símbolos
+_MANY_SYMBOLS = re.compile(r"[^\w\s]{3,}")  # secuencias largas de símbolos
 _MULTI_SPACE = re.compile(r"\s+")
-_HARD_HYPH = re.compile(r"(\w)-\n(\w)")              # palabra-\ncontinuación
-_SOFT_HYPH = re.compile(r"[\u00AD]")                 # soft hyphen
+_HARD_HYPH = re.compile(r"(\w)-\n(\w)")  # palabra-\ncontinuación
+_SOFT_HYPH = re.compile(r"[\u00AD]")  # soft hyphen
 _PAGE_NUM = re.compile(r"^\s*(page|p\.)\s*\d+\s*$", re.I)
-_SECTION_NUM = re.compile(r"^\s*\d+(\.\d+)*\s*$")    # líneas tipo "3", "4.2.1"
+_SECTION_NUM = re.compile(r"^\s*\d+(\.\d+)*\s*$")  # líneas tipo "3", "4.2.1"
 _URL_LINE = re.compile(r"https?://\S+", re.I)
 
 
@@ -39,7 +26,7 @@ def _normalize(text: str) -> str:
     """Normalize text encoding and characters"""
     # NFKC para normalizar formas; reemplaza espacios no-break, etc.
     t = unicodedata.normalize("NFKC", text or "")
-    t = t.replace("\u00A0", " ")  # NBSP → espacio
+    t = t.replace("\u00a0", " ")  # NBSP → espacio
     # ligaduras comunes
     t = t.replace("ﬁ", "fi").replace("ﬂ", "fl")
     return t
@@ -50,7 +37,7 @@ def _split_lines_keep(text: str) -> list:
     # normaliza saltos → líneas "crudas"
     t = text.replace("\r", "\n")
     raw = [ln.strip() for ln in t.splitlines()]
-    return [ln for ln in raw if ln]   # quita vacías
+    return [ln for ln in raw if ln]  # quita vacías
 
 
 def _dehyphenate(paragraph: str) -> str:
@@ -61,12 +48,13 @@ def _dehyphenate(paragraph: str) -> str:
 
 def _noise_ratio(line: str) -> float:
     """Calculate noise ratio of a line"""
-    if not line: return 1.0
+    if not line:
+        return 1.0
     letters = sum(ch.isalnum() for ch in line)
     return 1.0 - (letters / max(1, len(line)))
 
 
-def _looks_header_footer(lines: Iterable[str]) -> Tuple[set, set]:
+def _looks_header_footer(lines: Iterable[str]) -> tuple[set, set]:
     """
     Heurística simple: si la 1ª línea o la última línea se repite en >=30% de páginas,
     considéralas encabezado/pie
@@ -164,7 +152,7 @@ def _clean(text: str) -> str:
     return out.strip()
 
 
-def pdf_to_documents(pdf_path: Path, doc_id_prefix: str = None) -> List[Document]:
+def pdf_to_documents(pdf_path: Path, doc_id_prefix: str = None) -> list[Document]:
     """
     Lee un PDF y devuelve una lista de Document:
     - Un Document por página con su metadato 'page'.
@@ -173,8 +161,8 @@ def pdf_to_documents(pdf_path: Path, doc_id_prefix: str = None) -> List[Document
     if not pdf_path.exists():
         raise FileNotFoundError(f"No existe el archivo: {pdf_path}")
 
-    docs: List[Document] = []
-    base_id = (doc_id_prefix or pdf_path.stem)
+    docs: list[Document] = []
+    base_id = doc_id_prefix or pdf_path.stem
 
     with pdfplumber.open(str(pdf_path)) as pdf:
         for i, page in enumerate(pdf.pages, start=1):
@@ -183,32 +171,28 @@ def pdf_to_documents(pdf_path: Path, doc_id_prefix: str = None) -> List[Document
                 continue
             docs.append(
                 Document(
-                    id=f"{base_id}_p{i}",       # identificador único del documento
-                    text=text,                  # el texto ya limpio y normalizado de esa página
+                    id=f"{base_id}_p{i}",  # identificador único del documento
+                    text=text,  # el texto ya limpio y normalizado de esa página
                     source=str(pdf_path.name),  # nombre del PDF
-                    page=i                      # número de página
+                    page=i,  # número de página
                 )
             )
     return docs
 
 
-def folder_pdfs_to_documents(folder: Path, recursive: bool = True) -> List[Document]:
+def folder_pdfs_to_documents(folder: Path, recursive: bool = True) -> list[Document]:
     """
     Carga TODOS los PDFs de una carpeta (y subcarpetas si recursive=True).
     Devuelve lista de Documents (cada uno corresponde a una página).
     """
     pattern = "**/*.pdf" if recursive else "*.pdf"
-    docs: List[Document] = []
+    docs: list[Document] = []
     for pdf_path in folder.glob(pattern):
         docs.extend(pdf_to_documents(pdf_path))
     return docs
 
 
-def documents_to_chunks(
-    docs: List[Document],
-    max_tokens_chunk: int = 400,
-    overlap: int = 100
-) -> Dict[str, List[str]]:
+def documents_to_chunks(docs: list[Document], max_tokens_chunk: int = 400, overlap: int = 100) -> dict[str, list[str]]:
     """
     Convierte cada Document en sus chunks de texto.
     Retorna {doc_id: [chunk1, chunk2, ...]}.
@@ -216,7 +200,7 @@ def documents_to_chunks(
     Extra: si una página es muy corta y chunk_text() devuelve [],
     generamos al menos un chunk de respaldo para que el doc no quede fuera del índice.
     """
-    out: Dict[str, List[str]] = {}
+    out: dict[str, list[str]] = {}
     for d in docs:
         chunks = chunk_text(d.text, max_tokens_chunk, overlap)
 
@@ -235,10 +219,10 @@ def documents_to_chunks(
     return out
 
 
-#  Demo de uso rápido 
+#  Demo de uso rápido
 if __name__ == "__main__":
     from src.config import corpus_dir
-    
+
     all_docs = folder_pdfs_to_documents(corpus_dir(), recursive=True)
     print(f"Se leyeron {len(all_docs)} páginas con texto.")
 
