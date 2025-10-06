@@ -60,6 +60,7 @@ class OrchestratorAgent:
                         httpx_client=self.httpx_client,
                         agent_card=card,
                     )
+                    logger.info(f"Fetched {agent_name} agent card: {card.name} v{card.version}")
                 except Exception as e:
                     logger.error(
                         f"Critical error fetching {agent_name} agent card: {e}",
@@ -126,6 +127,7 @@ class OrchestratorAgent:
 
         t0 = time.perf_counter()
         try:
+            logger.debug(f"[{agent_name}] Sending message to agent...")
             response: SendMessageResponse = await client.send_message(request)
             dt = time.perf_counter() - t0
             try:
@@ -295,7 +297,6 @@ class OrchestratorAgent:
         await orchestrator.initialize()
         rag_agent: RAGAgent = orchestrator.get_agent_client("rag")
 
-        # ---- VISUAL -> CODE (unchanged) ----
         logger.info("Sending test message to Visual Agent...")
         image_uri = "E:/Documentos/Git Repositories/ui2code-rag/tests/test_image.png"
         with open(image_uri, "rb") as image_file:
@@ -345,16 +346,6 @@ class OrchestratorAgent:
         assert orchestrator._validate_response(response_code)
         code_result = get_message_text(response_code.root.result)
         logger.info(f"Code Agent result: {code_result}")
-
-        # ---- PROMPT-ONLY -> CODE (NEW) ----
-        logger.info("Sending prompt-only test to Code Agent...")
-        prompt_text = (
-            "Landing page hero section with a navbar, big headline, CTA button, and feature cards. Tailwind only."
-        )
-        response_prompt = await orchestrator.send_prompt_to_code_agent(
-            prompt_text, patterns=[], custom_instructions="mobile-first"
-        )
-        logger.info(f"Prompt-only Code Agent result: {response_prompt.get('status', 'OK')}")
 
         await orchestrator.close()
 

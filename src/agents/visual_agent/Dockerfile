@@ -1,6 +1,8 @@
 # Use Python 3.12 slim image as base
 FROM python:3.12-slim
 
+# Default port
+ENV PORT=10000
 
 # Python
 ENV PYTHONFAULTHANDLER=1 \
@@ -43,8 +45,7 @@ RUN chmod +x /app/entrypoint.sh
 USER root
 
 # App
-EXPOSE 10000
+EXPOSE ${PORT}
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://0.0.0.0:10000/.well-known/agent-card.json || exit 1
+    CMD curl -f http://0.0.0.0:${PORT}/.well-known/agent-card.json || exit 1
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["python", "-m", "src.server.main", "--host", "0.0.0.0", "--port", "10000"]

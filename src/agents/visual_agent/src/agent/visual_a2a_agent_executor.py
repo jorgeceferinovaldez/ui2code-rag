@@ -27,8 +27,8 @@ class VisualA2AAgentExecutor(AgentExecutor):
 
     def __init__(self):
         # Cambiá a Mock si querés probar sin modelo:
-        self.agent = VisualAgentWithGuardrails(VisualAgentMock())
-        # self.agent = VisualAgentWithGuardrails(VisualAgent())
+        # self.agent = VisualAgentWithGuardrails(VisualAgentMock())
+        self.agent = VisualAgentWithGuardrails(VisualAgent())
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
         logger.debug("Executing Visual Agent")

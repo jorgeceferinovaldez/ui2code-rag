@@ -20,7 +20,8 @@ class CodeA2AAgentExecutor(AgentExecutor):
     """
 
     def __init__(self) -> None:
-        self.agent = CodeAgentWithGuardrails(CodeAgentMock())
+        # self.agent = CodeAgentWithGuardrails(CodeAgentMock())
+        self.agent = CodeAgentWithGuardrails(CodeAgent())
 
     async def cancel(self, context: RequestContext) -> None:
         """Required by AgentExecutor; this agent has no long-running tasks."""

@@ -17,4 +17,4 @@ poetry run guardrails hub install \
     hub://guardrails/web_sanitization || true
 
 # Ejecutar servidor
-exec su app -c "$*"
+exec su app -c "python -m src.server.main --port ${PORT:-10001}"

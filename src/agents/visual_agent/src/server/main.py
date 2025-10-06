@@ -17,10 +17,9 @@ SERVER_TIMEOUT_KEEP_ALIVE = settings.server_timeout_keep_alive
 
 
 @click.command()
-@click.option("--host", "host", default="localhost")
-@click.option("--port", "port", default=10000)
-def main(host: str, port: int):
-    logger.info(f"Starting Visual Agent server on {host}:{port}")
+@click.option("--port", "port", default=PORT)
+def main(port: int):
+    logger.info(f"Starting Visual Agent server on {HOST}:{port}")
     try:
         capabilities = AgentCapabilities()
         skills = [
@@ -37,7 +36,7 @@ def main(host: str, port: int):
         agent_card = AgentCard(
             name="Visual Agent",
             description="Helps with getting information from images.",
-            url=f"http://{host}:{port}/",
+            url=f"http://{HOST}:{port}/",
             version="1.0.0",
             default_input_modes=["image/png", "image/jpeg", "image/jpg"],
             default_output_modes=["text/plain", "application/json"],
@@ -51,7 +50,7 @@ def main(host: str, port: int):
         )
         server = A2AStarletteApplication(agent_card=agent_card, http_handler=request_handler)
 
-        uvicorn.run(server.build(), host=host, port=port, timeout_keep_alive=SERVER_TIMEOUT_KEEP_ALIVE)
+        uvicorn.run(server.build(), host="0.0.0.0", port=port, timeout_keep_alive=SERVER_TIMEOUT_KEEP_ALIVE)
     except Exception as e:
         logger.error(f"An error occurred during server startup: {e}")
         sys.exit(1)
