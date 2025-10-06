@@ -18,13 +18,17 @@ class Settings(BaseSettings):
 
     openrouter_api_key: Optional[str] = None
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
-    openrouter_model: str = "moonshotai/kimi-vl-a3b-thinking:free"
+    openrouter_model: Optional[str] = None
 
     openai_key: Optional[str] = None
-    openai_model: str = "moonshotai/kimi-vl-a3b-thinking:free"
+    openai_model: Optional[str] = None
 
     host: str = "localhost"
     port: int = 10000
+    server_timeout_keep_alive: int = 600  # seconds
+
+    should_scale_down_images: bool = False
+    supported_mimes = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
 
     @model_validator(mode="after")
     def check_keys_and_models(self):

@@ -13,11 +13,13 @@ from a2a.utils import new_agent_text_message, get_file_parts
 from a2a.types import InvalidParamsError, Message
 
 # Custom dependencies
+from ..config import settings
 from .visual_agent_with_guardrails import VisualAgentWithGuardrails
 from .visual_agent import VisualAgent
 from .visual_agent_mock import VisualAgentMock  # útil para pruebas locales
 
-SUPPORTED_MIMES = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
+SUPPORTED_MIMES = settings.supported_mimes
+SHOULD_SCALE_DOWN_IMAGES = settings.should_scale_down_images
 
 
 class VisualA2AAgentExecutor(AgentExecutor):
@@ -30,42 +32,27 @@ class VisualA2AAgentExecutor(AgentExecutor):
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
         logger.debug("Executing Visual Agent")
-
-        # Heartbeat temprano para mantener viva la conexión en requests largos
-        await event_queue.enqueue_event(
-            new_agent_text_message(json.dumps({"status": "started", "stage": "loading_image"}))
-        )
-
         try:
             base64_image, mime = self._get_base64_image_from_context(context)
             image = self._load_image_from_base64(base64_image)
         except Exception as e:
-            logger.exception("Failed to load/parse image")
-            # Devolvemos SUCCESS con error semántico (no JSONRPC error)
+            logger.error("Failed to load/parse image")
             await event_queue.enqueue_event(
                 new_agent_text_message(json.dumps({"error": f"Image parsing error: {str(e)}"}))
             )
             return
 
-        # (Opcional) enviar otro heartbeat
-        await event_queue.enqueue_event(new_agent_text_message(json.dumps({"status": "running", "stage": "analyzing"})))
-
-        # Ejecutar el agente y **no** romper la RPC si algo falla.
         try:
-            # TIP: reducir la imagen para bajar latencia en el visual si viene gigante
-            image = self._maybe_downscale(image, max_side=1280)
+            if SHOULD_SCALE_DOWN_IMAGES:
+                image = self._maybe_downscale(image, max_side=1280)
 
             result = self.agent.invoke(image)
-
-            # Normalizamos resultado: debe ser dict JSON-serializable
             payload = result if isinstance(result, dict) else {"result": result}
 
             logger.success(f"Visual Agent result: {payload}")
             await event_queue.enqueue_event(new_agent_text_message(json.dumps(payload)))
-
         except Exception as e:
-            logger.exception("Visual Agent execution failed")
-            # IMPORTANTE: responder mensaje de éxito con campo error, no lanzar excepción
+            logger.error("Visual Agent execution failed")
             await event_queue.enqueue_event(
                 new_agent_text_message(json.dumps({"error": f"Visual agent failure: {str(e)}"}))
             )
@@ -74,9 +61,6 @@ class VisualA2AAgentExecutor(AgentExecutor):
         logger.error("Canceling Visual Agent")
         raise Exception("cancel not supported")
 
-    # -----------------------
-    # Helpers
-    # -----------------------
     def _get_base64_image_from_context(self, context: RequestContext) -> tuple[str, Optional[str]]:
         """Extract base64-encoded image data and mime from a request context message."""
         message: Message = context.message
