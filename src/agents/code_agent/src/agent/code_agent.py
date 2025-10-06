@@ -53,30 +53,32 @@ class CodeAgent:
         patterns: list[tuple] | None = None,
         custom_instructions: str = ""
     ) -> dict[str, Any]:
-        """Genera HTML/Tailwind sólo desde un prompt (sin análisis visual)."""
+        """Generates an HTML/Tailwind only from a prompt (without visual analysis)."""
 
         pattern_context = self._format_patterns_for_generation(patterns or [])
 
-        system = self._system_contract()
+        # IMPORTANT: use the HTML-only system prompt (not the JSON one)
+        system = self._system_contract_html()
+
         user_prompt = f"""
-Generate a clean, responsive HTML page using Tailwind CSS based on this UI description.
+    Generate a clean, responsive HTML page using Tailwind CSS based on this UI description.
 
-Constraints:
-- Tailwind utilities only (no <style>, no inline style).
-- Semantic HTML where possible.
-- Accessible (labels/ARIA when applicable).
-- Keep it minimal and modern.
+    Constraints:
+    - Tailwind utilities only (no <style>, no inline style).
+    - Semantic HTML where possible.
+    - Accessible (labels/ARIA when applicable).
+    - Keep it minimal and modern.
 
-UI description:
-{prompt_text}
+    UI description:
+    {prompt_text}
 
-Inspiration snippets (do NOT copy tokens blindly):
-{pattern_context}
+    Inspiration snippets (do NOT copy tokens blindly):
+    {pattern_context}
 
-Extra requirements:
-{custom_instructions or "(none)"}
+    Extra requirements:
+    {custom_instructions or "(none)"}
 
-Output ONLY the HTML (no markdown fence).
+    Return ONLY raw HTML (no JSON, no markdown, no backticks).
         """.strip()
 
         response = self.client.chat.completions.create(
@@ -90,16 +92,22 @@ Output ONLY the HTML (no markdown fence).
         )
 
         generated = (response.choices[0].message.content or "").strip()
-        cleaned = self._clean_generated_code(generated)
-        if not cleaned:
-            cleaned = self._get_fallback_html()
 
-        #avoid empty minItems/arrays 
+        # NEW: robust extraction of raw HTML from any shape
+        html_out = self._extract_html_from_any(generated)
+        if not html_out:
+            # try old fence cleaner as a fallback
+            html_out = self._clean_generated_code(generated)
+
+        if not html_out:
+            html_out = self._get_fallback_html()
+
+        # avoid empty minItems/arrays
         visual_components = ["from_prompt"]
         summary_components = [{"id": "prompt_0", "type": "container"}]
 
         return {
-            "html_code": cleaned,
+            "html_code": html_out,
             "generation_metadata": {
                 "model_used": self.model,
                 "patterns_used": len(patterns or []),
@@ -117,6 +125,7 @@ Output ONLY the HTML (no markdown fence).
             "used_component_ids": [],
             "missing": [],
         }
+
         
     def _get_generation_prompt(
             self, visual_analysis: dict[str, Any], pattern_context: str, custom_instructions: str = ""
@@ -128,7 +137,7 @@ Output ONLY the HTML (no markdown fence).
             color_scheme = visual_analysis.get("color_scheme", "neutral colors")
 
             ci_text = (
-                f"\n\nINSTRUCCIONES ADICIONALES DEL USUARIO:\n{custom_instructions.strip()}"
+                f"\n\nADITIONAL INSTRUCTIONS:\n{custom_instructions.strip()}"
                 if custom_instructions and custom_instructions.strip()
                 else ""
             )
@@ -218,8 +227,54 @@ Output ONLY the HTML (no markdown fence).
 
     # ------------------------------- HELPERS ------------------------------
 
+    # Add this helper inside CodeAgent
+    def _extract_html_from_any(self, content: str) -> str:
+        """Try hard to get raw HTML from any model output (JSON wrapper, code fences, plain)."""
+        s = (content or "").strip()
+
+        # a) Try JSON like {"html": "..."} or {"html_code": "..."}
+        if s.startswith("{"):
+            try:
+                obj = json.loads(s)
+                if isinstance(obj, dict):
+                    for key in ("html", "html_code", "content"):
+                        val = obj.get(key)
+                        if isinstance(val, str) and ("<html" in val or "<!DOCTYPE html" in val or "<nav" in val or "<div" in val):
+                            return val.strip()
+            except Exception:
+                pass
+
+        # b) Try fenced blocks ```html ... ```
+        if "```html" in s:
+            start = s.find("```html") + len("```html")
+            end = s.find("```", start)
+            if end != -1:
+                return s[start:end].strip()
+
+        # c) Try generic fences ```
+        if "```" in s:
+            start = s.find("```") + 3
+            end = s.find("```", start)
+            if end != -1:
+                candidate = s[start:end].strip()
+                if "<html" in candidate or "<!DOCTYPE html" in candidate:
+                    return candidate
+
+        # d) Try to slice from <!DOCTYPE ...> to </html>
+        if "<!DOCTYPE html" in s and "</html>" in s:
+            start = s.find("<!DOCTYPE html")
+            end = s.rfind("</html>")
+            return s[start : end + len("</html>")].strip()
+
+        # e) As a last resort, if we see HTML-ish tags, return as-is
+        if "<html" in s or "<!DOCTYPE html" in s or "<nav" in s or "<div" in s:
+            return s
+
+        # f) Give up -> empty (caller will fallback)
+        return ""
+
     def create_sample_examples(self, examples_dir):
-        """Escribir ejemplos HTML/CSS de referencia"""
+        """Write HTML/CSS reference examples"""
         write_examples(examples_dir)
 
     def _system_contract(self) -> str:
@@ -227,6 +282,17 @@ Output ONLY the HTML (no markdown fence).
         return (
             "You are a deterministic UI-to-HTML code generator. "
             "Output ONLY a single JSON object with the required fields. No prose, no markdown."
+        )
+        
+        
+    # Add this method inside CodeAgent
+    def _system_contract_html(self) -> str:
+        """System prompt for prompt-only mode: return raw HTML, never JSON."""
+        return (
+            "You are a deterministic UI-to-HTML generator. "
+            "Return ONLY a complete raw HTML document (with <!DOCTYPE html>). "
+            "Do not return JSON. Do not return Markdown fences. "
+            "No explanations."
         )
 
     def _format_patterns_for_generation(self, patterns: List[tuple]) -> str:
