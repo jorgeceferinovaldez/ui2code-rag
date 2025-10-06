@@ -13,53 +13,10 @@ from .code_agent_with_guardrails import CodeAgentWithGuardrails
 from .code_agent import CodeAgent
 
 
-def _asdict(obj: Any) -> Dict[str, Any]:
-    """Convert part object (pydantic model or plain dict) to a plain dict."""
-    if obj is None:
-        return {}
-    if isinstance(obj, dict):
-        return obj
-    out: Dict[str, Any] = {}
-    # Common attributes on A2A Part
-    for attr in ("kind", "text", "metadata", "meta", "file", "mimeType"):
-        if hasattr(obj, attr):
-            out[attr] = getattr(obj, attr)
-    # Some implementations nest payloads differently
-    if not out and hasattr(obj, "model_dump"):
-        try:
-            out = obj.model_dump()  # type: ignore[attr-defined]
-        except Exception:
-            pass
-    return out
-
-
-def _normalize_parts(parts: List[Any]) -> List[Dict[str, Any]]:
-    """Normalize incoming parts so we can read them consistently."""
-    norm: List[Dict[str, Any]] = []
-    for p in parts or []:
-        d = _asdict(p)
-        # unify metadata key
-        meta = d.get("metadata", None)
-        if meta is None:
-            meta = d.get("meta", None)
-        if not isinstance(meta, dict):
-            meta = {}
-        norm.append(
-            {
-                "kind": d.get("kind"),
-                "text": d.get("text"),
-                "metadata": meta,
-                "file": d.get("file"),
-                "mimeType": d.get("mimeType"),
-            }
-        )
-    return norm
-
-
 class CodeA2AAgentExecutor(AgentExecutor):
     """A2A executor for the Code Agent supporting:
-       - Prompt → HTML (prompt-only)
-       - Visual + patterns → HTML
+    - Prompt → HTML (prompt-only)
+    - Visual + patterns → HTML
     """
 
     def __init__(self) -> None:
@@ -72,7 +29,7 @@ class CodeA2AAgentExecutor(AgentExecutor):
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
         msg = context.message
         raw_parts = getattr(msg, "parts", []) or []
-        parts = _normalize_parts(raw_parts)
+        parts = self._normalize_parts(raw_parts)
 
         # Debug: show what actually arrived
         try:
@@ -151,3 +108,46 @@ class CodeA2AAgentExecutor(AgentExecutor):
         err = "Missing 'analysis_result' or 'prompt' input"
         logger.error("Agent execution failed: {}", err)
         await event_queue.enqueue_event(new_agent_text_message(json.dumps({"error": err}, ensure_ascii=False)))
+
+    @staticmethod
+    def _asdict(obj: Any) -> Dict[str, Any]:
+        """Convert part object (pydantic model or plain dict) to a plain dict."""
+        if obj is None:
+            return {}
+        if isinstance(obj, dict):
+            return obj
+        out: Dict[str, Any] = {}
+        # Common attributes on A2A Part
+        for attr in ("kind", "text", "metadata", "meta", "file", "mimeType"):
+            if hasattr(obj, attr):
+                out[attr] = getattr(obj, attr)
+        # Some implementations nest payloads differently
+        if not out and hasattr(obj, "model_dump"):
+            try:
+                out = obj.model_dump()  # type: ignore[attr-defined]
+            except Exception:
+                pass
+        return out
+
+    @staticmethod
+    def _normalize_parts(parts: List[Any]) -> List[Dict[str, Any]]:
+        """Normalize incoming parts so we can read them consistently."""
+        norm: List[Dict[str, Any]] = []
+        for p in parts or []:
+            d = CodeA2AAgentExecutor._asdict(p)
+            # unify metadata key
+            meta = d.get("metadata", None)
+            if meta is None:
+                meta = d.get("meta", None)
+            if not isinstance(meta, dict):
+                meta = {}
+            norm.append(
+                {
+                    "kind": d.get("kind"),
+                    "text": d.get("text"),
+                    "metadata": meta,
+                    "file": d.get("file"),
+                    "mimeType": d.get("mimeType"),
+                }
+            )
+        return norm

@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     server_timeout_keep_alive: int = 600  # seconds
 
     should_scale_down_images: bool = False
-    supported_mimes = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
+    supported_mimes: set[str] = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
 
     @model_validator(mode="after")
     def check_keys_and_models(self):

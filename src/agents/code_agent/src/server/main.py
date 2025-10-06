@@ -13,6 +13,7 @@ from ..config import settings
 
 HOST = settings.host
 PORT = settings.port
+SERVER_TIMEOUT_KEEP_ALIVE = settings.server_timeout_keep_alive
 
 
 @click.command()
@@ -50,7 +51,7 @@ def main(host: str, port: int):
         )
         server = A2AStarletteApplication(agent_card=agent_card, http_handler=request_handler)
 
-        uvicorn.run(server.build(), host=host, port=port)
+        uvicorn.run(server.build(), host=host, port=port, timeout_keep_alive=SERVER_TIMEOUT_KEEP_ALIVE)
     except Exception as e:
         logger.error(f"An error occurred during server startup: {e}")
         sys.exit(1)

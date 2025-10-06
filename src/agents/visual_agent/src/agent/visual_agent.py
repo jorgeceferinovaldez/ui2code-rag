@@ -9,17 +9,11 @@ import openai
 from PIL import Image
 import cv2
 import numpy as np
-
-# OCR opcional
-try:
-    import pytesseract
-    _HAS_TESS = True
-except Exception:
-    _HAS_TESS = False
+import pytesseract
 
 # Custom dependencies
 from ..config import settings
-from ..texts.prompts import ANALYSIS_PROMPT
+from ..texts.prompts import ANALYSIS_PROMPT, REINFORCEMENT_PROMPT
 from ..texts.types import COMMON_COMPONENTS
 
 OPENROUTER_API_KEY = settings.openrouter_api_key
@@ -46,8 +40,6 @@ class VisualAgent:
                 self.client = openai.OpenAI(api_key=OPENAI_KEY)
                 self.model = OPENAI_MODEL
                 self.use_openrouter = False
-
-    # ------------------------------- PUBLIC -------------------------------
 
     def invoke(self, img: Image) -> dict[str, Any]:
         """
@@ -114,8 +106,6 @@ class VisualAgent:
                 "image_metadata": image_metadata if "image_metadata" in locals() else None,
             }
 
-    # --------------------------- INTERNAL UTILS ---------------------------
-
     def _preprocess_image(self, image: Image) -> dict[str, Any]:
         """Extrae metadata básica y pistas de layout. También calcula paleta preliminar."""
         try:
@@ -138,8 +128,8 @@ class VisualAgent:
 
             return {
                 "image_meta": {"w": width, "h": height, "aspect_ratio": float(width) / float(height)},
-                "palette_pre": palette,         # lista de {hex, ratio}
-                "layout_hints": layout_info,    # total_elements / complexity
+                "palette_pre": palette,  # lista de {hex, ratio}
+                "layout_hints": layout_info,  # total_elements / complexity
                 "file_size": memory_size,
                 "format": image.format or "unknown",
             }
@@ -265,28 +255,7 @@ class VisualAgent:
 
     def _get_analysis_prompt_strict_json(self) -> str:
         """Prompt reforzado para minimizar alucinación (exige JSON estricto)."""
-        # No tocamos tu ANALYSIS_PROMPT, solo lo endurecemos
-        suffix = """
-Respond ONLY with a single JSON object. No prose, no markdown, no backticks.
-JSON shape (min):
-{
-  "components": [
-    {
-      "id": "string",
-      "type": "button|navbar|card|image|text|input|icon|container|…",
-      "bbox": [x,y,w,h],
-      "confidence": 0.0_to_1.0,
-      "evidence": { "ocr": "string or empty" }
-    }
-  ],
-  "layout": "grid|flex|unknown",
-  "style": "modern|classic|…"
-}
-Rules:
-- Do not invent components. If unsure, omit it or set low confidence.
-- Copy textual content into evidence.ocr (use what you can read).
-- bbox must be integers [x,y,w,h] in image pixel coordinates.
-"""
+        suffix = REINFORCEMENT_PROMPT
         return f"{ANALYSIS_PROMPT}\n\n{suffix}"
 
     def _extract_components_from_text(self, text: str) -> list:
@@ -298,8 +267,6 @@ Rules:
                 found_components.append(component)
         return found_components if found_components else ["container", "content"]
 
-    # --------------------- SPEC NORMALIZATION / ENRICH ---------------------
-
     def _estimate_spacing_unit(self, img_bgr: np.ndarray) -> int:
         """Heurística simple: fallback a 8 si no se puede estimar."""
         try:
@@ -309,8 +276,7 @@ Rules:
             return 8
 
     def _try_ocr(self, image_pil: Image) -> str:
-        if not _HAS_TESS:
-            return ""
+        """Intenta extraer texto con OCR si está disponible."""
         try:
             txt = pytesseract.image_to_string(image_pil)
             return (txt or "").strip()
@@ -333,22 +299,26 @@ Rules:
                     if not isinstance(ev, dict):
                         ev = {}
                     ev_ocr = ev.get("ocr") or ""
-                    norm.append({
-                        "id": _id,
-                        "type": _type,
-                        "bbox": [int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])],
-                        "confidence": max(0.0, min(1.0, conf)),
-                        "evidence": {"ocr": str(ev_ocr)}
-                    })
+                    norm.append(
+                        {
+                            "id": _id,
+                            "type": _type,
+                            "bbox": [int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])],
+                            "confidence": max(0.0, min(1.0, conf)),
+                            "evidence": {"ocr": str(ev_ocr)},
+                        }
+                    )
                 elif isinstance(c, str):
                     # De _extract_components_from_text (fallbacks)
-                    norm.append({
-                        "id": f"cmp_{idx}",
-                        "type": c,
-                        "bbox": [0, 0, 0, 0],
-                        "confidence": 0.3,
-                        "evidence": {"ocr": ""}
-                    })
+                    norm.append(
+                        {
+                            "id": f"cmp_{idx}",
+                            "type": c,
+                            "bbox": [0, 0, 0, 0],
+                            "confidence": 0.3,
+                            "evidence": {"ocr": ""},
+                        }
+                    )
         return norm
 
     def _build_spec(self, llm_obj: Dict[str, Any], image_metadata: Dict[str, Any], image_pil: Image) -> Dict[str, Any]:
@@ -383,19 +353,23 @@ Rules:
             "image_meta": {"w": w, "h": h},
             "spacing_unit": int(spacing_unit),
             "palette": palette if palette else [{"hex": "#111111", "ratio": 1.0}],
-            "components": components if components else [{
-                "id": "container_0",
-                "type": "container",
-                "bbox": [0, 0, w, h],
-                "confidence": 0.2,
-                "evidence": {"ocr": ""}
-            }],
+            "components": (
+                components
+                if components
+                else [
+                    {
+                        "id": "container_0",
+                        "type": "container",
+                        "bbox": [0, 0, w, h],
+                        "confidence": 0.2,
+                        "evidence": {"ocr": ""},
+                    }
+                ]
+            ),
             "layout": layout,
             "style": style,
         }
         return spec
-
-    # ------------------------------- HASH ---------------------------------
 
     @staticmethod
     def _canonical_dumps(obj: Dict[str, Any]) -> str:

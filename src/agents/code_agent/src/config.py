@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     host: str = "localhost"
     port: int = 10001
 
+    server_timeout_keep_alive: int = 600  # seconds
+
     @model_validator(mode="after")
     def check_keys_and_models(self):
         """Ensure consistency between API keys and models, and at least one provider configured."""
