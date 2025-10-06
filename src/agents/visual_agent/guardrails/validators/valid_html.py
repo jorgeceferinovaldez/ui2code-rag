@@ -16,15 +16,14 @@ class IsHTMLField(Validator):
     """
     Validador que verifica si una propiedad de un JSON
     contiene HTML válido.
-
+    
     Se debe pasar como parámetro:
         IsHTMLField(on_fail="exception", property="html_code")
     """
-
     def __init__(self, **params):
         super().__init__(**params)
         self.params = params
-
+        
     def validate(self, value: Any, metadata: Dict) -> ValidationResult:
         """Validates that a value is parseable as valid JSON and optionally validates against a JSON schema."""
         stringified = value
@@ -43,14 +42,15 @@ class IsHTMLField(Validator):
             return FailResult(
                 error_message=f"Value is not parseable as valid JSON! Reason: {str(error)}",
             )
-
+        
+        
         # Recupera la propiedad a validar desde los parámetros
         field_name = self.params.get("property")
         if not field_name:
             raise FailResult(error_message="Property (param 'property') not specified.")
 
         if field_name not in parsed:
-            raise FailResult(error_message=f"Missing property '{field_name}' in JSON.")
+            raise FailResult(error_message=f"Property '{field_name}' is missing from the JSON.")
 
         html_str = parsed[field_name]
 

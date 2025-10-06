@@ -1,95 +1,152 @@
-"""Executor for the Code Agent using A2A framework."""
+from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Dict, List, Optional
+
+from loguru import logger
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.utils import new_agent_text_message
-from a2a.types import FileWithBytes, Part
-from loguru import logger
 
-# Custom dependencies
-from .code_agent_mock import CodeAgentMock
 from .code_agent_with_guardrails import CodeAgentWithGuardrails
 from .code_agent import CodeAgent
 
 
+def _asdict(obj: Any) -> Dict[str, Any]:
+    """Convert part object (pydantic model or plain dict) to a plain dict."""
+    if obj is None:
+        return {}
+    if isinstance(obj, dict):
+        return obj
+    out: Dict[str, Any] = {}
+    # Common attributes on A2A Part
+    for attr in ("kind", "text", "metadata", "meta", "file", "mimeType"):
+        if hasattr(obj, attr):
+            out[attr] = getattr(obj, attr)
+    # Some implementations nest payloads differently
+    if not out and hasattr(obj, "model_dump"):
+        try:
+            out = obj.model_dump()  # type: ignore[attr-defined]
+        except Exception:
+            pass
+    return out
+
+
+def _normalize_parts(parts: List[Any]) -> List[Dict[str, Any]]:
+    """Normalize incoming parts so we can read them consistently."""
+    norm: List[Dict[str, Any]] = []
+    for p in parts or []:
+        d = _asdict(p)
+        # unify metadata key
+        meta = d.get("metadata", None)
+        if meta is None:
+            meta = d.get("meta", None)
+        if not isinstance(meta, dict):
+            meta = {}
+        norm.append(
+            {
+                "kind": d.get("kind"),
+                "text": d.get("text"),
+                "metadata": meta,
+                "file": d.get("file"),
+                "mimeType": d.get("mimeType"),
+            }
+        )
+    return norm
+
+
 class CodeA2AAgentExecutor(AgentExecutor):
-    def __init__(self):
-        # self.agent = CodeAgentWithGuardrails(CodeAgentMock())
+    """A2A executor for the Code Agent supporting:
+       - Prompt → HTML (prompt-only)
+       - Visual + patterns → HTML
+    """
+
+    def __init__(self) -> None:
         self.agent = CodeAgentWithGuardrails(CodeAgent())
 
+    async def cancel(self, context: RequestContext) -> None:
+        """Required by AgentExecutor; this agent has no long-running tasks."""
+        logger.debug("Cancel called (no-op).")
+
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
-        logger.debug("Executing Code Agent")
-        analysis_result, patterns, custom_instructions = self._get_content_from_context(context)
+        msg = context.message
+        raw_parts = getattr(msg, "parts", []) or []
+        parts = _normalize_parts(raw_parts)
 
-        result = self.agent.invoke(patterns, analysis_result, custom_instructions)
-        logger.success(f"Agent execution result: {result}")
-        await event_queue.enqueue_event(new_agent_text_message(json.dumps(result)))
+        # Debug: show what actually arrived
+        try:
+            dbg = [{"kind": p.get("kind"), "meta": p.get("metadata"), "has_text": bool(p.get("text"))} for p in parts]
+            logger.debug("Incoming message parts (normalized): {}", dbg)
+        except Exception:
+            logger.debug("Could not log normalized parts.")
 
-    async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
-        raise Exception("cancel not supported")
+        def pick_text(meta_type: Optional[str]) -> Optional[str]:
+            """Pick the first text part, optionally filtered by metadata.type."""
+            for p in parts:
+                if p.get("kind") != "text":
+                    continue
+                meta = p.get("metadata") or {}
+                if meta_type is None or meta.get("type") == meta_type:
+                    t = p.get("text")
+                    if t:
+                        return t
+            return None
 
-    def _get_content_from_context(self, context: RequestContext) -> tuple[dict[str, Any] | None, list[tuple], str]:
-        """Extract analysis_result, patterns, and custom_instructions from the context message parts"""
-        message = context.message
-        if not message:
-            raise Exception("No message found in context")
+        # Try to extract inputs
+        analysis_result_raw = pick_text("analysis_result")
+        patterns_raw = pick_text("patterns")
+        custom_instr = pick_text("custom_instructions") or ""
 
-        message_parts = message.parts
-        if not message_parts:
-            raise Exception("No parts found in message")
+        # Prompt: first try the labeled part…
+        prompt_text = pick_text("prompt")
+        # …then any text part…
+        if not prompt_text:
+            prompt_text = pick_text(None)
+        # …finally, fall back to message-level text if the transport placed it there
+        if not prompt_text:
+            prompt_text = getattr(msg, "text", None)
 
-        analysis_result = None
-        patterns = []
-        custom_instructions = ""
+        # Parse patterns safely
+        patterns: List[Any] = []
+        if patterns_raw:
+            try:
+                patterns = json.loads(patterns_raw)
+            except Exception:
+                logger.warning("Failed to parse 'patterns' JSON. Continuing with empty list.")
+                patterns = []
 
-        extracted_parts = self._extract_content(message_parts)
-        for part, metadata, mime_type in extracted_parts:
-            if mime_type != "text/plain":
-                raise Exception(f"Unsupported MIME type: {mime_type}")
-            if metadata and isinstance(metadata, dict) and "type" in metadata:
-                if metadata["type"] == "analysis_result":
-                    try:
-                        analysis_result: dict[str, Any] = json.loads(part) if isinstance(part, str) else part
-                    except json.JSONDecodeError as e:
-                        raise Exception("Failed to decode analysis_result JSON") from e
-                elif metadata["type"] == "patterns":
-                    try:
-                        patterns: list[tuple] = json.loads(part) if isinstance(part, str) else part
-                    except json.JSONDecodeError as e:
-                        raise Exception("Failed to decode patterns JSON") from e
-                elif metadata["type"] == "custom_instructions":
-                    custom_instructions: str = part
+        # Parse analysis safely
+        analysis_result: Optional[Dict[str, Any]] = None
+        if analysis_result_raw:
+            try:
+                analysis_result = json.loads(analysis_result_raw)
+            except Exception:
+                logger.warning("Failed to parse 'analysis_result' JSON. Using empty dict.")
+                analysis_result = {}
 
-        return analysis_result, patterns, custom_instructions
+        # Route 1: Prompt-only
+        if prompt_text and not analysis_result:
+            logger.debug("CodeAgentExecutor: prompt-only mode")
+            result = self.agent.invoke_from_prompt(
+                prompt_text=prompt_text,
+                patterns=patterns,
+                custom_instructions=custom_instr,
+            )
+            await event_queue.enqueue_event(new_agent_text_message(json.dumps(result, ensure_ascii=False)))
+            return
 
-    def _extract_content(
-        self,
-        message_parts: list[Part],
-    ) -> list[tuple[str | dict[str, Any], str]]:
-        """Extract text, file, and data parts from message parts"""
-        parts: list[tuple[str | dict[str, Any], str]] = []
-        if not message_parts:
-            return []
-        for part in message_parts:
-            p = part.root
-            if p.kind == "text":
-                parts.append((p.text, p.metadata or None, "text/plain"))
+        # Route 2: Visual + patterns
+        if analysis_result is not None:
+            logger.debug("CodeAgentExecutor: visual+patterns mode")
+            result = self.agent.invoke(
+                patterns=patterns,
+                visual_analysis=analysis_result,
+                custom_instructions=custom_instr,
+            )
+            await event_queue.enqueue_event(new_agent_text_message(json.dumps(result, ensure_ascii=False)))
+            return
 
-            elif p.kind == "file":
-                if isinstance(p.file, FileWithBytes):
-                    parts.append((p.file.bytes, p.metadata or None, p.file.mime_type or ""))
-                else:
-                    parts.append((p.file.uri, p.metadata or None, p.file.mime_type or ""))
-            elif p.kind == "data":
-                try:
-                    jsonData = json.dumps(p.data)
-                    if "type" in p.data and p.data["type"] == "form":
-                        parts.append((p.data, p.metadata or None, "form"))
-                    else:
-                        parts.append((jsonData, p.metadata or None, "application/json"))
-                except Exception as e:
-                    print("Failed to dump data", e)
-                    parts.append(("<data>", "text/plain"))
-        return parts
+        # If we reach here, nothing usable arrived. Return JSON error payload (don’t raise).
+        err = "Missing 'analysis_result' or 'prompt' input"
+        logger.error("Agent execution failed: {}", err)
+        await event_queue.enqueue_event(new_agent_text_message(json.dumps({"error": err}, ensure_ascii=False)))

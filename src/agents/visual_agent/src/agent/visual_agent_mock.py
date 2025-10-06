@@ -52,7 +52,7 @@ class VisualAgentMock:
             "file_size": 786300,
             "format": "JPEG"
         },
-        "model_used": "x-ai/grok-4-fast:free",
+        "model_used": "mistralai/mistral-small-3.1-24b-instruct:free",
         "analysis_timestamp": null
         }
         """

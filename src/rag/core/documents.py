@@ -8,6 +8,7 @@ from typing import List, Optional, Dict
 import re
 import unicodedata
 
+from bs4 import BeautifulSoup
 
 @dataclass
 class Document:
@@ -122,6 +123,39 @@ def _slide_merge(sents: List[str], max_tok: int, overlap: int) -> List[str]:
     return chunks
 
 
+def chunk_html_semantic_with_tags(html_text, max_tokens, overlap):
+    
+    soup = BeautifulSoup(html_text, "html.parser")
+    tags_to_chunk = [
+        'section', 'div', 'article', 'header', 'footer', 'main', 'nav', 'aside',
+        'form', 'table', 'ul', 'ol', 'li', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'
+    ]
+    chunks = []
+    for tag in soup.find_all(tags_to_chunk):
+        html_chunk = str(tag) 
+        words = tag.get_text(separator=" ", strip=True).split()
+        if len(words) >= max_tokens:
+            # Si el bloque es muy grande, subdividir por tokens pero manteniendo la etiqueta
+            start = 0
+            
+            while start < len(words):
+                end = min(start + max_tokens, len(words))
+                # Reconstruir el chunk con la etiqueta y el subset de texto
+                # Puedes usar solo el texto, pero aquí se mantiene la etiqueta original
+                
+                chunk_text = " ".join(words[start:end])
+                # Reemplaza el texto del tag por el chunk (manteniendo la etiqueta)
+                
+                tag_copy = BeautifulSoup(str(tag), "html.parser")
+                
+                for t in tag_copy.find_all(tags_to_chunk):
+                    t.string = chunk_text
+                chunks.append(str(tag_copy))
+                start += max_tokens - overlap
+        else:
+            chunks.append(html_chunk)
+    return chunks
+
 def chunk_text(text: str, max_tokens: int = 200, overlap: int = 60) -> List[str]:
     """
     Chunking:
@@ -150,7 +184,8 @@ def chunk_text(text: str, max_tokens: int = 200, overlap: int = 60) -> List[str]
 def documents_to_chunks(
     docs: List[Document], 
     max_tokens_chunk: int = 200, 
-    overlap: int = 60
+    overlap: int = 60,
+    chunking_method = chunk_html_semantic_with_tags  
 ) -> Dict[str, List[str]]:
     """
     Convert documents to chunks
@@ -166,7 +201,7 @@ def documents_to_chunks(
     chunks_per_doc = {}
     
     for doc in docs:
-        chunks = chunk_text(doc.text, max_tokens_chunk, overlap)
+        chunks = chunking_method(doc.text, max_tokens_chunk, overlap)
         if not chunks:
             # Fallback for very short documents
             clean_text = " ".join((doc.text or "").split())
