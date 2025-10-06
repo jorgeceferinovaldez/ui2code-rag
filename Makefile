@@ -92,11 +92,11 @@ check-config:
 
 run-visual-agent:
 	@echo "Running Visual Agent..."
-	$(PYTHON_INTERPRETER) -m src.agents.visual_agent.src.server
+	$(PYTHON_INTERPRETER) -m src.agents.visual_agent.src.server.main
 
 run-code-agent:
 	@echo "Running Code Agent..."
-	$(PYTHON_INTERPRETER) -m src.agents.code_agent.src.server
+	$(PYTHON_INTERPRETER) -m src.agents.code_agent.src.server.main
 
 ## Run Streamlit web app
 run-server:

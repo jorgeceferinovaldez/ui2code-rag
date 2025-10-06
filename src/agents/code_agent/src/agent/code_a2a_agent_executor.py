@@ -8,6 +8,7 @@ from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.utils import new_agent_text_message
 
+from .code_agent_mock import CodeAgentMock
 from .code_agent_with_guardrails import CodeAgentWithGuardrails
 from .code_agent import CodeAgent
 
@@ -62,7 +63,7 @@ class CodeA2AAgentExecutor(AgentExecutor):
     """
 
     def __init__(self) -> None:
-        self.agent = CodeAgentWithGuardrails(CodeAgent())
+        self.agent = CodeAgentWithGuardrails(CodeAgentMock())
 
     async def cancel(self, context: RequestContext) -> None:
         """Required by AgentExecutor; this agent has no long-running tasks."""

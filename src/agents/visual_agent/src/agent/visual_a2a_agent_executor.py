@@ -15,7 +15,7 @@ from a2a.types import InvalidParamsError, Message
 # Custom dependencies
 from .visual_agent_with_guardrails import VisualAgentWithGuardrails
 from .visual_agent import VisualAgent
-# from .visual_agent_mock import VisualAgentMock  # útil para pruebas locales
+from .visual_agent_mock import VisualAgentMock  # útil para pruebas locales
 
 SUPPORTED_MIMES = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
 
@@ -25,8 +25,8 @@ class VisualA2AAgentExecutor(AgentExecutor):
 
     def __init__(self):
         # Cambiá a Mock si querés probar sin modelo:
-        # self.agent = VisualAgentWithGuardrails(VisualAgentMock())
-        self.agent = VisualAgentWithGuardrails(VisualAgent())
+        self.agent = VisualAgentWithGuardrails(VisualAgentMock())
+        # self.agent = VisualAgentWithGuardrails(VisualAgent())
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
         logger.debug("Executing Visual Agent")
@@ -48,9 +48,7 @@ class VisualA2AAgentExecutor(AgentExecutor):
             return
 
         # (Opcional) enviar otro heartbeat
-        await event_queue.enqueue_event(
-            new_agent_text_message(json.dumps({"status": "running", "stage": "analyzing"}))
-        )
+        await event_queue.enqueue_event(new_agent_text_message(json.dumps({"status": "running", "stage": "analyzing"})))
 
         # Ejecutar el agente y **no** romper la RPC si algo falla.
         try:
