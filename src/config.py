@@ -145,13 +145,15 @@ pinecone_cloud = config["pinecone"]["cloud"]
 pinecone_region = config["pinecone"]["region"]
 pinecone_namespace = config["pinecone"]["namespace"]
 pinecone_rag_namespace = config["pinecone"]["rag_namespace"]
+pinecone_metric = config["pinecone"]["metric"]
+
 
 # Sentence Transformers configuration
 st_model_name = config["sentence_transformers"]["model_name"]
 
 # Env variables
 try:
-    pinecone_api_key = os.environ["PINECONE_API_KEY"]
+    pinecone_api_key = os.environ.get("PINECONE_API_KEY", "")
     print("✅ PINECONE_API_KEY loaded from environment variables.")
     host = os.environ.get("HOST", "")
     print(f"✅ HOST set to '{host}'")

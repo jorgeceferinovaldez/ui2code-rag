@@ -2,14 +2,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 import os
+from sentence_transformers import SentenceTransformer
+from pinecone import Pinecone, ServerlessSpec
 
-try:
-    from sentence_transformers import SentenceTransformer
-    from pinecone import Pinecone, ServerlessSpec
-except ImportError as e:
-    raise ImportError(
-        "Required dependencies not found. Install with:\n" "pip install sentence-transformers pinecone-client"
-    ) from e
+# Local dependencies:
+from src.config import (
+    pinecone_cloud,
+    pinecone_region,
+    pinecone_metric,
+    st_model_name,
+    pinecone_namespace,
+    pinecone_api_key,
+)
 
 
 # Convención de IDs de chunk: f"{doc_id}::chunk_{local_idx}"
@@ -29,9 +33,9 @@ def ensure_pinecone_index(
     pc: Pinecone,
     name: str,
     dim: int,
-    cloud: str = "aws",
-    region: str = "us-east-1",
-    metric: str = "cosine",
+    cloud: str = pinecone_cloud,
+    region: str = pinecone_region,
+    metric: str = pinecone_metric,
 ):
     """Ensure Pinecone index exists, create if not"""
     idxs = {i["name"]: i for i in pc.list_indexes().get("indexes", [])}
@@ -52,15 +56,15 @@ class PineconeSearcher:
     """
 
     index_name: str
-    model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
-    cloud: str = "aws"
-    region: str = "us-east-1"
-    api_key: Optional[str] = None
-    namespace: str = "default"  # configurable
+    model_name: str = st_model_name
+    cloud: str = pinecone_cloud
+    region: str = pinecone_region
+    api_key: Optional[str] = pinecone_api_key
+    namespace: str = pinecone_namespace  # configurable
 
     def __post_init__(self):
         """Initialize Pinecone connection and embedding model"""
-        key = self.api_key or os.getenv("PINECONE_API_KEY")
+        key = self.api_key
         if not key:
             raise RuntimeError("Falta PINECONE_API_KEY en entorno o parámetro api_key.")
 
