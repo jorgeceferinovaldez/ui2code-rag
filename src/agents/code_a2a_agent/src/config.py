@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     host: str = "code-agent"
     port: int = 10001
 
-    server_timeout_keep_alive: int = 600  # seconds
+    server_timeout_keep_alive: int = 300  # seconds
 
     @model_validator(mode="after")
     def check_keys_and_models(self):

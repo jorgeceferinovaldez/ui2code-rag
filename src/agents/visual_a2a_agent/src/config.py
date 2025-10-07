@@ -25,7 +25,7 @@ class Settings(BaseSettings):
 
     host: str = "visual-agent"
     port: int = 10000
-    server_timeout_keep_alive: int = 600  # seconds
+    server_timeout_keep_alive: int = 300  # seconds
 
     should_scale_down_images: bool = False
     supported_mimes: set[str] = {"image/png", "image/jpeg", "image/jpg", "image/webp"}

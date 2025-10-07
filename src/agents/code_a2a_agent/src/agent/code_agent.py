@@ -9,7 +9,7 @@ from loguru import logger
 
 # Custom dependencies
 from ..config import settings
-from ..texts.prompts import SYSTEM_PROMPT, GENERATION_PROMPT_TEMPLATE 
+from ..texts.prompts import SYSTEM_PROMPT, GENERATION_PROMPT_TEMPLATE
 from ..texts.html_examples import write_examples, FALLBACK_HTML
 
 OPENROUTER_API_KEY = settings.openrouter_api_key
@@ -49,10 +49,7 @@ class CodeAgent:
     # ------------------------------- PUBLIC -------------------------------
 
     def invoke_from_prompt(
-        self,
-        prompt_text: str,
-        patterns: list[tuple] | None = None,
-        custom_instructions: str = ""
+        self, prompt_text: str, patterns: list[tuple] | None = None, custom_instructions: str = ""
     ) -> dict[str, Any]:
         """Generates an HTML/Tailwind only from a prompt (without visual analysis)."""
 
@@ -127,43 +124,52 @@ class CodeAgent:
             "missing": [],
         }
 
-        
     def _get_generation_prompt(
-            self, visual_analysis: dict[str, Any], pattern_context: str, custom_instructions: str = ""
-        ) -> str:
-            """Construct the full prompt for code generation"""
-            components = ", ".join(visual_analysis.get("components", []))
-            layout = visual_analysis.get("layout", "modern layout")
-            style = visual_analysis.get("style", "clean and modern")
-            color_scheme = visual_analysis.get("color_scheme", "neutral colors")
+        self, visual_analysis: dict[str, Any], pattern_context: str, custom_instructions: str = ""
+    ) -> str:
+        """Construct the full prompt for code generation"""
+        logger.debug(f"Visual analysis for prompt: {visual_analysis}")
+        logger.debug(f"Pattern context for prompt: {pattern_context}")
+        logger.debug(f"Custom instructions for prompt: {custom_instructions}")
 
-            ci_text = (
-                f"\n\nADITIONAL INSTRUCTIONS:\n{custom_instructions.strip()}"
-                if custom_instructions and custom_instructions.strip()
-                else ""
-            )
+        components = ", ".join(str(c) for c in visual_analysis.get("components", []))
+        layout = visual_analysis.get("layout", "modern layout")
+        style = visual_analysis.get("style", "clean and modern")
+        color_scheme = visual_analysis.get("color_scheme", "neutral colors")
 
-            return GENERATION_PROMPT_TEMPLATE.format(
-                components=components,
-                layout=layout,
-                style=style,
-                color_scheme=color_scheme,
-                pattern_context=pattern_context,
-                custom_instructions=ci_text,
-            )
+        logger.debug(f"Color scheme for prompt: {color_scheme}")
+        logger.debug(f"Layout for prompt: {layout}")
+        logger.debug(f"Components for prompt: {components}")
+        logger.debug(f"Style for prompt: {style}")
+
+        ci_text = (
+            f"\n\nADDITIONAL INSTRUCTIONS:\n{custom_instructions.strip()}"
+            if custom_instructions and custom_instructions.strip()
+            else ""
+        )
+
+        logger.debug(f"Final custom instructions text for prompt: {ci_text}")
+        prompt = GENERATION_PROMPT_TEMPLATE.format(
+            components=components,
+            layout=layout,
+            style=style,
+            color_scheme=color_scheme,
+            pattern_context=pattern_context,
+            custom_instructions=ci_text,
+        )
+
+        logger.debug(f"Generated prompt text: {prompt}")
+
+        return prompt
+
     def invoke(
         self, patterns: list[tuple], visual_analysis: dict[str, Any], custom_instructions: str = ""
     ) -> dict[str, Any]:
         try:
-            # Debug: Log what we received
-            logger.info(f"🔍 Code Agent received:")
-            logger.info(f"   Components: {visual_analysis.get('components', [])}")
-            logger.info(f"   Layout: {visual_analysis.get('layout', 'unknown')}")
-            logger.info(f"   Style: {visual_analysis.get('style', 'unknown')}")
-            logger.info(f"   Patterns count: {len(patterns)}")
-
             pattern_context = self._format_patterns_for_generation(patterns)
-            prompt = self._get_generation_prompt(visual_analysis, pattern_context, custom_instructions)
+            instructions_context = custom_instructions or "No hay instrucciones adicionales."
+
+            prompt = self._get_generation_prompt(visual_analysis, pattern_context, instructions_context)
 
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -184,22 +190,13 @@ class CodeAgent:
             # Validate that generated HTML matches expected components
             raw_components = visual_analysis.get("components", [])
             validation_result = self._validate_html_components(cleaned_code, raw_components)
-
-            logger.info(f"🔎 Component validation:")
-            logger.info(f"   Expected: {raw_components}")
-            logger.info(f"   Validation result: {validation_result['valid']}")
-
             if not validation_result["valid"]:
                 logger.warning(f"⚠️⚠️⚠️ HALLUCINATION DETECTED ⚠️⚠️⚠️")
                 logger.warning(f"   Message: {validation_result['message']}")
                 logger.warning(f"   Expected components: {raw_components}")
                 logger.warning(f"   Extra components found: {validation_result['extra_components']}")
                 logger.warning(f"   🚨 The model generated sections that were NOT in the visual analysis!")
-                # Note: We still return the code but log the issue
-            else:
-                logger.info(f"   ✅ No unexpected components detected")
 
-            # metadata: just types or ids
             if raw_components and isinstance(raw_components[0], dict):
                 components_for_metadata = [c.get("type", "") for c in raw_components if isinstance(c, dict)]
             else:
@@ -217,7 +214,7 @@ class CodeAgent:
                     "model_used": self.model,
                     "patterns_used": len(patterns),
                     "visual_components": components_for_metadata,
-                    "custom_instructions": custom_instructions.strip() if custom_instructions else "",
+                    "custom_instructions": instructions_context.strip() if instructions_context else "",
                     "timestamp": datetime.now().isoformat(),
                 },
                 "visual_analysis_summary": {
@@ -228,7 +225,7 @@ class CodeAgent:
             }
 
         except Exception as e:
-            # Fallback 
+            logger.error(f"Code Agent invocation failed: {e}")
             return {
                 "html_code": self._get_fallback_html(),
                 "generation_metadata": {
@@ -247,8 +244,6 @@ class CodeAgent:
                 "status": "FALLBACK_HTML",
             }
 
-    # _format_patterns_for_generation / _get_generation_prompt / _clean_generated_code / _get_fallback_html = idem
-
     # ------------------------------- HELPERS ------------------------------
 
     # Add this helper inside CodeAgent
@@ -263,7 +258,9 @@ class CodeAgent:
                 if isinstance(obj, dict):
                     for key in ("html", "html_code", "content"):
                         val = obj.get(key)
-                        if isinstance(val, str) and ("<html" in val or "<!DOCTYPE html" in val or "<nav" in val or "<div" in val):
+                        if isinstance(val, str) and (
+                            "<html" in val or "<!DOCTYPE html" in val or "<nav" in val or "<div" in val
+                        ):
                             return val.strip()
             except Exception:
                 pass
@@ -302,13 +299,12 @@ class CodeAgent:
         write_examples(examples_dir)
 
     def _system_contract(self) -> str:
-        
+
         return (
             "You are a deterministic UI-to-HTML code generator. "
             "Output ONLY a single JSON object with the required fields. No prose, no markdown."
         )
-        
-        
+
     # Add this method inside CodeAgent
     def _system_contract_html(self) -> str:
         """System prompt for prompt-only mode: return raw HTML, never JSON."""
@@ -325,7 +321,7 @@ class CodeAgent:
         Patterns come enriched with complete html_code from RAGAgent.
         """
         if not patterns:
-            return "No similar patterns found. Generate from scratch using best practices."
+            return "No se han encontrado patrones similares. Genera desde cero usando buenas prácticas."
 
         formatted = []
         for i, (doc_id, chunk, metadata, score) in enumerate(patterns, 1):
@@ -514,10 +510,10 @@ class CodeAgent:
 
         # Common sections that shouldn't appear if not in analysis
         common_sections = {
-            'header': r'<header[^>]*>',
-            'nav': r'<nav[^>]*>',
-            'footer': r'<footer[^>]*>',
-            'aside': r'<aside[^>]*>',
+            "header": r"<header[^>]*>",
+            "nav": r"<nav[^>]*>",
+            "footer": r"<footer[^>]*>",
+            "aside": r"<aside[^>]*>",
         }
 
         # Normalize expected_components to lowercase strings
@@ -542,13 +538,9 @@ class CodeAgent:
             # Check if component is mentioned in expected_components
             is_expected = any(comp in exp or exp in comp for exp in expected_lower)
             # Also check common aliases
-            aliases = {
-                'nav': ['navigation', 'navbar', 'menu'],
-                'header': ['top', 'banner'],
-                'footer': ['bottom']
-            }
+            aliases = {"nav": ["navigation", "navbar", "menu"], "header": ["top", "banner"], "footer": ["bottom"]}
             if not is_expected and comp in aliases:
-                is_expected = any(alias in ' '.join(expected_lower) for alias in aliases[comp])
+                is_expected = any(alias in " ".join(expected_lower) for alias in aliases[comp])
 
             if not is_expected:
                 extra.append(comp)
@@ -557,11 +549,7 @@ class CodeAgent:
             return {
                 "valid": False,
                 "extra_components": extra,
-                "message": f"Generated HTML contains unexpected sections: {', '.join(extra)}. These were not in the visual analysis."
+                "message": f"Generated HTML contains unexpected sections: {', '.join(extra)}. These were not in the visual analysis.",
             }
 
-        return {
-            "valid": True,
-            "extra_components": [],
-            "message": "HTML components match visual analysis"
-        }
+        return {"valid": True, "extra_components": [], "message": "HTML components match visual analysis"}

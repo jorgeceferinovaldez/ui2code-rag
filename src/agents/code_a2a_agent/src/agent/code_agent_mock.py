@@ -2,12 +2,15 @@
 
 from datetime import datetime
 from typing import Any
+from loguru import logger
 
 
 class CodeAgentMock:
     def invoke(
         self, patterns: list[tuple], visual_analysis: dict[str, Any], custom_instructions: str = ""
     ) -> dict[str, Any]:
+        """Mock implementation of the Code Agent's invoke method."""
+        logger.debug("MockCodeAgent invoked")
         return {
             "html_code": "<html><body><h1>Generated Code Mock</h1></body></html>",
             "generation_metadata": {

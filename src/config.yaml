@@ -62,7 +62,9 @@ pinecone:
   region: "us-east-1"
   namespace: "default"
   rag_namespace: "html-css-examples"
-  metric: "cosine"
 
 sentence_transformers:
   model_name: "sentence-transformers/all-MiniLM-L6-v2"
+
+server_timeout_keep_alive: 600  # seconds
+server_connect_timeout: 30  # seconds

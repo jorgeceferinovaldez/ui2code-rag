@@ -52,6 +52,7 @@ class CodeAgentWithGuardrails:
             gm["custom_instructions"] = ""
         if not isinstance(gm.get("timestamp"), str) or not gm["timestamp"]:
             from datetime import datetime
+
             gm["timestamp"] = datetime.now().isoformat()
         out["generation_metadata"] = gm
 
@@ -134,13 +135,6 @@ class CodeAgentWithGuardrails:
         return self._validate_and_sanitize(result)
 
     def invoke(self, patterns, visual_analysis, custom_instructions=""):
-        logger.debug(
-            "invoke with patterns=%s, visual_analysis keys=%s, custom_instructions=%s",
-            len(patterns) if patterns else 0,
-            list((visual_analysis or {}).keys()),
-            (custom_instructions or "")[:120],
-        )
-
         va = dict(visual_analysis or {})
         va.setdefault("components", [])
         va.setdefault("layout", "unknown")
