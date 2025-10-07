@@ -1,0 +1,37 @@
+% !TEX root = main.tex
+\section{Resultados}
+
+A continuación se presentan los resultados de la evaluación del sistema:
+
+\begin{table}[h!]
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|}
+\hline
+k & precision\_pre & recall\_pre & ndcg\_pre & precision\_post & recall\_post & ndcg\_post & mrr\_pre & mrr\_post \\
+\hline
+3 & 0.3 & 0.9 & 0.79 & 0.3 & 0.9 & 0.86 & 0.77 & 0.87 \\
+5 & 0.2 & 1.0 & 0.83 & 0.2 & 1.0 & 0.90 & 0.77 & 0.87 \\
+\hline
+\end{tabular}
+}
+\caption{Métricas de evaluación para diferentes valores de $k$}
+\end{table}
+\subsection*{Significado de cada métrica}
+\begin{itemize}
+    \item k: número de resultados considerados (top-k).
+    \item precision\_pre: precisión antes del reranking (proporción de relevantes en los primeros $k$).
+    \item recall\_pre: recall antes del reranking (proporción de relevantes recuperados en los primeros $k$).
+    \item ndcg\_pre: calidad de ranking antes del reranking (más alto es mejor).
+    \item precision\_post: precisión después del reranking.
+    \item recall\_post: recall después del reranking.
+    \item ndcg\_post: calidad de ranking después del reranking.
+    \item mrr\_pre: mean reciprocal rank antes del reranking (qué tan arriba aparece el primer relevante).
+    \item mrr\_post: mean reciprocal rank después del reranking.
+\end{itemize}
+
+\subsection*{Interpretación}
+El recall es alto (0.9 y 1.0), lo que significa que casi todos los documentos relevantes están siendo recuperados en el top-k. La precisión es baja (0.2–0.3), indicando que hay muchos resultados no relevantes en el top-k. El reranking mejora el ndcg y el mrr, es decir, los relevantes aparecen más arriba en la lista. El reranking no mejora la precisión ni el recall, pero sí el orden de los resultados.
+
+\subsection*{Resumen}
+El sistema recupera casi todos los relevantes (alto recall), pero la precisión podría mejorar. El reranking ayuda a que los relevantes estén mejor posicionados (mayor ndcg y mrr).
