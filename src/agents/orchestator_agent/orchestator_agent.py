@@ -220,26 +220,40 @@ class OrchestratorAgent:
         custom_instructions: str = "",
     ) -> dict:
         """Send a natural-language prompt (no visual analysis) to the Code Agent."""
+        try:
+            msg_parts = [
+                {"kind": "text", "metadata": {"type": "prompt"}, "text": prompt_text or ""},
+                {"kind": "text", "metadata": {"type": "patterns"}, "text": self._serialize_patterns(patterns or [])},
+                {"kind": "text", "metadata": {"type": "custom_instructions"}, "text": custom_instructions or ""},
+            ]
 
-        msg_parts = [
-            {"kind": "text", "metadata": {"type": "prompt"}, "text": prompt_text or ""},
-            {"kind": "text", "metadata": {"type": "patterns"}, "text": self._serialize_patterns(patterns or [])},
-            {"kind": "text", "metadata": {"type": "custom_instructions"}, "text": custom_instructions or ""},
-        ]
-
-        payload = {
-            "message": {
-                "role": "user",
-                "parts": msg_parts,
-                "messageId": uuid4().hex,
+            payload = {
+                "message": {
+                    "role": "user",
+                    "parts": msg_parts,
+                    "messageId": uuid4().hex,
+                }
             }
-        }
 
-        resp = await self._send_message_to_agent("code", payload)
-        if self._validate_response(resp):
-            text = get_message_text(resp.root.result)
-            return json.loads(text) if text else {"error": "Empty response from Code Agent"}
-        return {"error": "Invalid response from Code Agent"}
+            resp = await self._send_message_to_agent("code", payload)
+
+            # Try to validate response, catch exceptions
+            try:
+                if self._validate_response(resp):
+                    text = get_message_text(resp.root.result)
+                    if text:
+                        return json.loads(text)
+                    else:
+                        return {"error": "Empty response from Code Agent"}
+            except RuntimeError as e:
+                logger.error(f"Code Agent response validation failed: {e}")
+                return {"error": f"Code Agent response validation failed: {str(e)}"}
+
+            return {"error": "Invalid response from Code Agent"}
+
+        except Exception as e:
+            logger.error(f"Error sending prompt to Code Agent: {e}", exc_info=True)
+            return {"error": f"Failed to communicate with Code Agent: {str(e)}"}
 
     async def send_message_to_visual_agent(self, img_path: Path) -> dict[str, Any]:
         """Send an image to the Visual Agent and return the analysis result."""

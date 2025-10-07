@@ -24,3 +24,18 @@ dependencies = [
     "nest-asyncio (>=1.6.0,<2.0.0)",
     "sentence-transformers (>=5.1.1,<6.0.0)",
 ]
+
+[dependency-groups]
+dev = [
+    "pydantic-settings (>=2.11.0,<3.0.0)",
+    "beautifulsoup4 (>=4.14.2,<5.0.0)",
+    "openai (>=1.109.1,<2.0.0)",
+    "a2a-sdk[http-server] (>=0.3.7,<0.4.0)",
+    "click (>=8.1.8,<9.0.0)",
+    "uvicorn (>=0.37.0,<0.38.0)",
+    "loguru (>=0.7.3,<0.8.0)",
+    "pillow (>=11.3.0,<12.0.0)",
+    "opencv-python (>=4.12.0.88,<5.0.0.0)",
+    "guardrails-ai (>=0.6.7,<0.7.0)",
+    "pytesseract (>=0.3.13,<0.4.0)",
+]

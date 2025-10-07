@@ -18,9 +18,9 @@ from ..texts.types import COMMON_COMPONENTS
 
 OPENROUTER_API_KEY = settings.openrouter_api_key
 OPENROUTER_BASE_URL = settings.openrouter_base_url
-CODE_MODEL = settings.openrouter_model
+CODE_MODEL = settings.openrouter_visual_model
 OPENAI_KEY = settings.openai_key
-OPENAI_MODEL = settings.openai_model
+OPENAI_MODEL = settings.openai_visual_model
 
 
 class VisualAgent:

@@ -5,6 +5,7 @@ import os, json, textwrap
 from typing import Any, Dict, List, Set
 from datetime import datetime
 import openai
+from loguru import logger
 
 # Custom dependencies
 from ..config import settings
@@ -13,9 +14,9 @@ from ..texts.html_examples import write_examples, FALLBACK_HTML
 
 OPENROUTER_API_KEY = settings.openrouter_api_key
 OPENROUTER_BASE_URL = settings.openrouter_base_url
-CODE_MODEL = settings.openrouter_model
+CODE_MODEL = settings.openrouter_code_model
 OPENAI_KEY = settings.openai_key
-OPENAI_MODEL = settings.openai_model
+OPENAI_MODEL = settings.openai_code_model
 MAX_TOKENS = settings.max_tokens
 TEMPERATURE = min(0.2, settings.temperature or 0.2)  # bajar temp por seguridad
 
@@ -154,6 +155,13 @@ class CodeAgent:
         self, patterns: list[tuple], visual_analysis: dict[str, Any], custom_instructions: str = ""
     ) -> dict[str, Any]:
         try:
+            # Debug: Log what we received
+            logger.info(f"🔍 Code Agent received:")
+            logger.info(f"   Components: {visual_analysis.get('components', [])}")
+            logger.info(f"   Layout: {visual_analysis.get('layout', 'unknown')}")
+            logger.info(f"   Style: {visual_analysis.get('style', 'unknown')}")
+            logger.info(f"   Patterns count: {len(patterns)}")
+
             pattern_context = self._format_patterns_for_generation(patterns)
             prompt = self._get_generation_prompt(visual_analysis, pattern_context, custom_instructions)
 
@@ -174,6 +182,21 @@ class CodeAgent:
                 cleaned_code = self._get_fallback_html()
 
             raw_components = visual_analysis.get("components", [])
+            validation_result = self._validate_html_components(cleaned_code, raw_components)
+
+            logger.info(f"🔎 Component validation:")
+            logger.info(f"   Expected: {raw_components}")
+            logger.info(f"   Validation result: {validation_result['valid']}")
+
+            if not validation_result["valid"]:
+                logger.warning(f"⚠️⚠️⚠️ HALLUCINATION DETECTED ⚠️⚠️⚠️")
+                logger.warning(f"   Message: {validation_result['message']}")
+                logger.warning(f"   Expected components: {raw_components}")
+                logger.warning(f"   Extra components found: {validation_result['extra_components']}")
+                logger.warning(f"   🚨 The model generated sections that were NOT in the visual analysis!")
+                # Note: We still return the code but log the issue
+            else:
+                logger.info(f"   ✅ No unexpected components detected")
 
             # metadata: just types or ids
             if raw_components and isinstance(raw_components[0], dict):
@@ -296,27 +319,52 @@ class CodeAgent:
         )
 
     def _format_patterns_for_generation(self, patterns: List[tuple]) -> str:
-        """Usar patrones como CONTEXTO, evitando que el modelo copie literal sin control."""
+        """
+        Format RAG patterns with FULL HTML code for the model to use as structural base.
+        Patterns come enriched with complete html_code from RAGAgent.
+        """
         if not patterns:
-            return "No similar patterns found."
+            return "No similar patterns found. Generate from scratch using best practices."
+
         formatted = []
         for i, (doc_id, chunk, metadata, score) in enumerate(patterns, 1):
-            source_name = "unknown"
+            # Extract metadata
             if isinstance(metadata, dict):
                 source_name = metadata.get("filename", metadata.get("source", "unknown"))
+                description = metadata.get("description", "No description available")
+                doc_type = metadata.get("doc_type", "unknown")
+                # Get FULL html_code (enriched by RAGAgent)
+                html_code = metadata.get("html_code", chunk)
             else:
                 source_name = getattr(metadata, "filename", getattr(metadata, "source", "unknown"))
+                description = getattr(metadata, "description", "No description available")
+                doc_type = getattr(metadata, "doc_type", "unknown")
+                html_code = getattr(metadata, "html_code", chunk)
 
-            snippet = chunk[:600] + ("..." if len(chunk) > 600 else "")
+            # Show more code for better context (2000 chars instead of 600)
+            code_snippet = html_code[:2000] + ("\n... [truncated]" if len(html_code) > 2000 else "")
+
             block = textwrap.dedent(
                 f"""\
-                Example {i} (similarity {score:.3f}, source: {source_name}):
-                <snippet>
-                {snippet}
-                </snippet>
-            """
+                === Pattern {i} (Relevance: {score:.2f}) ===
+                Source: {source_name}
+                Type: {doc_type}
+                Description: {description}
+
+                HTML Structure (use as STRUCTURAL REFERENCE):
+                ```html
+                {code_snippet}
+                ```
+
+                Key points to adopt:
+                - Component hierarchy and organization
+                - Tailwind utility class patterns
+                - Responsive design approach
+                - Layout structure (grid/flex)
+                """
             ).strip()
             formatted.append(block)
+
         return "\n\n".join(formatted)
 
     def _components_brief(self, visual_analysis: Dict[str, Any]) -> str:
@@ -455,3 +503,64 @@ class CodeAgent:
 
     def _get_fallback_html(self) -> str:
         return FALLBACK_HTML
+
+    def _validate_html_components(self, html_code: str, expected_components: list) -> dict:
+        """
+        Validates that generated HTML only contains expected components.
+        Returns: {"valid": bool, "extra_components": list, "message": str}
+        """
+        import re
+
+        # Common sections that shouldn't appear if not in analysis
+        common_sections = {
+            'header': r'<header[^>]*>',
+            'nav': r'<nav[^>]*>',
+            'footer': r'<footer[^>]*>',
+            'aside': r'<aside[^>]*>',
+        }
+
+        # Normalize expected_components to lowercase strings
+        expected_lower = []
+        for c in expected_components:
+            if isinstance(c, dict):
+                comp_type = c.get("type", "").lower()
+                if comp_type:
+                    expected_lower.append(comp_type)
+            else:
+                expected_lower.append(str(c).lower())
+
+        # Detect components present in HTML
+        found_components = []
+        for name, pattern in common_sections.items():
+            if re.search(pattern, html_code, re.IGNORECASE):
+                found_components.append(name)
+
+        # Identify extra components (present but not expected)
+        extra = []
+        for comp in found_components:
+            # Check if component is mentioned in expected_components
+            is_expected = any(comp in exp or exp in comp for exp in expected_lower)
+            # Also check common aliases
+            aliases = {
+                'nav': ['navigation', 'navbar', 'menu'],
+                'header': ['top', 'banner'],
+                'footer': ['bottom']
+            }
+            if not is_expected and comp in aliases:
+                is_expected = any(alias in ' '.join(expected_lower) for alias in aliases[comp])
+
+            if not is_expected:
+                extra.append(comp)
+
+        if extra:
+            return {
+                "valid": False,
+                "extra_components": extra,
+                "message": f"Generated HTML contains unexpected sections: {', '.join(extra)}. These were not in the visual analysis."
+            }
+
+        return {
+            "valid": True,
+            "extra_components": [],
+            "message": "HTML components match visual analysis"
+        }

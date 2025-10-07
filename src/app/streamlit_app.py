@@ -5,6 +5,7 @@ import nest_asyncio
 from datetime import datetime
 from typing import Optional, Any
 from PIL import Image
+from loguru import logger
 
 from src.agents.orchestator_agent.utils import save_analysis_result, save_generated_code
 from src.config import (
@@ -12,11 +13,11 @@ from src.config import (
     project_dir,
     temp_images_dir,
     pinecone_index,
-    pinecone_model_name,
     pinecone_cloud,
     pinecone_region,
     pinecone_api_key,
     pinecone_namespace,
+    st_model_name,
 )
 from src.agents.rag_agent.rag_agent import RAGAgent
 from src.agents.orchestator_agent.orchestator_agent import OrchestratorAgent
@@ -43,14 +44,15 @@ def get_rag_pipeline():
 
         # Initialize Pinecone searcher if configured
         pinecone_searcher = None
-        pinecone_searcher = PineconeSearcher(
-            index_name=pinecone_index,
-            model_name=pinecone_model_name,
-            cloud=pinecone_cloud,
-            region=pinecone_region,
-            api_key=pinecone_api_key,
-            namespace=pinecone_namespace,
-        )
+        if pinecone_api_key:
+            pinecone_searcher = PineconeSearcher(
+                index_name=pinecone_index,
+                model_name=st_model_name,
+                cloud=pinecone_cloud,
+                region=pinecone_region,
+                api_key=pinecone_api_key,
+                namespace=pinecone_namespace,
+            )
 
         # Initialize pipeline
         pipeline = RagPipeline(
@@ -63,7 +65,8 @@ def get_rag_pipeline():
         return pipeline
 
     except Exception as e:
-        st.error(f"Failed to initialize RAG pipeline: {str(e)}")
+        logger.warning(f"RAG pipeline initialization error: {str(e)}")
+        # Don't show error - PDF corpus is optional
         return None
 
 
@@ -439,7 +442,20 @@ def main():
     st.title("🎨 Multi-Agent UI-to-Code System")
     st.markdown("Convert UI designs to clean HTML/Tailwind CSS code using AI vision, RAG, and prompt-to-HTML.")
 
-    # Initialize RAG pipeline (only needed for RAG search)
+    # Show corpus status
+    rag_agent_test = initilize_rag_agent()
+    if rag_agent_test:
+        rag_status = rag_agent_test.get_rag_status()
+        if rag_status.get('status') == 'ready':
+            total_docs = rag_status.get('total_documents', 0)
+            total_chunks = rag_status.get('total_chunks', 0)
+            st.success(f"✅ HTML/CSS Pattern Corpus: {total_docs} documents ({total_chunks} code patterns) ready from WebSight dataset")
+        else:
+            st.warning("⚠️ HTML/CSS pattern corpus not fully initialized. Some features may be limited.")
+    else:
+        st.warning("⚠️ RAG Agent not available. Pattern-based code generation may be limited.")
+
+    # Initialize RAG pipeline (only needed for PDF RAG search - optional)
     pipeline = get_rag_pipeline()
 
     # Sidebar navigation
@@ -455,9 +471,9 @@ def main():
         # Choose mode
         mode = st.radio(
             "Mode",
-            ["RAG Search", "Prompt → HTML"],
+            ["RAG Search (HTML Patterns)", "Prompt → HTML"],
             horizontal=True,
-            help="RAG Search = query your corpus. Prompt → HTML = generate UI code from a natural-language prompt.",
+            help="RAG Search = query HTML/CSS patterns from WebSight. Prompt → HTML = generate UI code from a natural-language prompt.",
         )
 
         # Layout
@@ -465,18 +481,15 @@ def main():
         with col1:
             query = st.text_area(
                 "Enter your query or UI prompt:",
-                placeholder="• RAG Search: ask about your documents.\n• Prompt → HTML: describe the UI you want (e.g., 'dark dashboard with sidebar, cards, and a header').",
+                placeholder="• RAG Search: describe UI components (e.g., 'dashboard with sidebar and cards').\n• Prompt → HTML: describe the UI you want (e.g., 'dark dashboard with sidebar, cards, and a header').",
                 height=120,
             )
 
         with col2:
             st.markdown("### Settings")
-            if mode == "RAG Search":
-                top_k = st.slider("Top results to show", 1, 20, 5)
-                top_retrieve = st.slider("Candidates to retrieve", 10, 100, 30)
-                use_reranking = st.checkbox("Use re-ranking", value=True)
-                include_summary = st.checkbox("Include summary", value=True)
-                prompt_custom_instructions = ""  # keep var defined for later reference
+            if mode == "RAG Search (HTML Patterns)":
+                top_k = st.slider("Top results to show", 1, 10, 5)
+                prompt_custom_instructions = ""   # keep var defined for later reference
                 save_results_prompt = False
             else:
                 # Prompt → HTML options
@@ -487,59 +500,57 @@ def main():
                 )
                 save_results_prompt = st.checkbox("Save generated code", value=True)
 
-        btn_label = "🚀 Search" if mode == "RAG Search" else "🚀 Generate from Prompt"
-        btn_disabled = (not query or not query.strip()) or (mode == "RAG Search" and not pipeline)
+        btn_label = "🚀 Search HTML Patterns" if mode == "RAG Search (HTML Patterns)" else "🚀 Generate from Prompt"
+        btn_disabled = (not query or not query.strip())
 
         if st.button(btn_label, disabled=btn_disabled):
-            # --- RAG SEARCH MODE --- #
-            if mode == "RAG Search":
-                if not pipeline:
-                    st.error("RAG pipeline is not available. Please check your configuration.")
+            # --- RAG SEARCH MODE (HTML PATTERNS) --- #
+            if mode == "RAG Search (HTML Patterns)":
+                # Initialize RAG agent for HTML patterns
+                rag_agent = initilize_rag_agent()
+                if not rag_agent:
+                    st.error("RAG agent is not available. Please check your configuration.")
                 else:
-                    with st.spinner("Searching..."):
-                        response = query_rag_system(
-                            query=query.strip(),
-                            top_k=top_k,
-                            top_retrieve=top_retrieve,
-                            use_reranking=use_reranking,
-                            include_summary=include_summary,
-                            pipeline=pipeline,
-                        )
+                    with st.spinner("Searching HTML/CSS patterns..."):
+                        # Create a simple visual analysis from the query
+                        visual_analysis = {
+                            'analysis_text': query.strip(),
+                            'components': [],
+                            'layout': 'unknown',
+                            'style': 'modern'
+                        }
 
-                    if response:
-                        st.markdown("### Query Information")
-                        metadata = response["metadata"]
-                        c1, c2, c3, c4 = st.columns(4)
-                        with c1:
-                            st.metric("Total Results", metadata["total_results"])
-                        with c2:
-                            st.metric("Retrieval Method", metadata["retrieval_method"])
-                        with c3:
-                            st.metric("Re-ranking", "Yes" if metadata["reranking_used"] else "No")
-                        with c4:
-                            st.metric("Retrieved Candidates", metadata["top_retrieve"])
+                        # Use RAG agent to search patterns
+                        patterns = rag_agent.invoke(visual_analysis, top_k=top_k)
 
-                        if response["summary_context"]:
-                            st.markdown("### 📝 Summary Context")
-                            st.info(response["summary_context"])
+                    if patterns:
+                        st.markdown(f"### 🔍 Found {len(patterns)} Similar HTML/CSS Patterns")
 
-                        st.markdown("### 📚 Cited Context")
-                        st.text_area("", response["cited_context"], height=200)
-
-                        st.markdown("### 🔍 Search Results")
-                        for result in response["results"]:
+                        for i, (doc_id, chunk, metadata, score) in enumerate(patterns, 1):
                             with st.expander(
-                                f"Result #{result['rank']} - {result['citation']} (Score: {result['score']:.4f})"
+                                f"Pattern #{i} - {metadata.get('filename', doc_id)} (Relevance: {score:.3f})"
                             ):
-                                st.markdown(f"**Document ID:** `{result['doc_id']}`")
-                                st.markdown(f"**Source:** {result['metadata'].get('source', 'Unknown')}")
-                                if result["metadata"].get("page"):
-                                    st.markdown(f"**Page:** {result['metadata']['page']}")
-                                st.markdown("**Content:**")
-                                st.text(result["chunk"])
-                                if result["metadata"]:
-                                    with st.expander("Metadata"):
-                                        st.json(result["metadata"])
+                                st.markdown(f"**Document ID:** `{doc_id}`")
+                                st.markdown(f"**Type:** {metadata.get('doc_type', 'Unknown')}")
+                                st.markdown(f"**Description:** {metadata.get('description', 'No description')}")
+
+                                # Show HTML code if available
+                                html_code = metadata.get('html_code', chunk)
+                                if html_code:
+                                    st.markdown("**HTML Code:**")
+                                    st.code(html_code[:1500] + ("..." if len(html_code) > 1500 else ""), language="html")
+                                else:
+                                    st.markdown("**Content:**")
+                                    st.text(chunk)
+
+                                if metadata:
+                                    with st.expander("📋 Full Metadata"):
+                                        # Don't show html_code in JSON (too long)
+                                        meta_display = {k: v for k, v in metadata.items() if k != 'html_code'}
+                                        meta_display['html_code_length'] = len(html_code) if html_code else 0
+                                        st.json(meta_display)
+                    else:
+                        st.warning("No patterns found. Try a different query.")
 
             # --- PROMPT → HTML MODE --- #
             else:
@@ -590,76 +601,248 @@ def main():
             st.cache_resource.clear()
             st.rerun()
 
-        status = get_system_status(pipeline)
-        if status:
-            status_color = "🟢" if status["status"] == "healthy" else "🟡"
-            st.markdown(f"## {status_color} System Status: {status['status'].upper()}")
+        # Get RAG Agent status (HTML/CSS patterns - the actual corpus)
+        rag_agent = initilize_rag_agent()
+        if rag_agent:
+            rag_status = rag_agent.get_rag_status()
 
-            st.markdown("### 📚 Corpus Status")
-            corpus = status["corpus"]
-            c1, c2, c3 = st.columns(3)
+            # Determine overall system status
+            is_healthy = (rag_status.get('status') == 'ready' and
+                         rag_status.get('total_documents', 0) > 0)
+            status_color = "🟢" if is_healthy else "🟡"
+            status_text = "HEALTHY" if is_healthy else "WARNING"
+
+            st.markdown(f"## {status_color} System Status: {status_text}")
+
+            # HTML/CSS Pattern Corpus Status
+            st.markdown("### 📚 HTML/CSS Pattern Corpus Status")
+            c1, c2, c3, c4 = st.columns(4)
             with c1:
-                st.metric("Total Documents", corpus["total_documents"])
+                st.metric("HTML Documents", rag_status.get('total_documents', 0))
             with c2:
-                st.metric("Total Chunks", corpus["total_chunks"])
+                st.metric("Code Patterns", rag_status.get('total_chunks', 0))
             with c3:
-                path_str = corpus["corpus_path"]
-                st.metric(
-                    "Corpus Path",
-                    path_str if len(path_str) < 30 else f"...{path_str[-27:]}",
-                )
+                vector_status = "🟢 Ready" if rag_status.get('vector_search_available') else "🔴 Not Ready"
+                st.metric("Vector Search", vector_status)
+            with c4:
+                bm25_status = "🟢 Ready" if rag_status.get('bm25_search_available') else "🔴 Not Ready"
+                st.metric("BM25 Search", bm25_status)
 
-            st.markdown("### 🔗 Index Status")
-            indices = status["indices"]
-            c1, c2 = st.columns(2)
-            with c1:
-                bm25_status = "🟢 Ready" if indices["bm25_ready"] else "🔴 Not Ready"
-                st.markdown(f"**BM25 Index:** {bm25_status}")
-            with c2:
-                vector_status = "🟢 Ready" if indices["vector_ready"] else "🔴 Not Ready"
-                st.markdown(f"**Vector Index:** {vector_status}")
+            # Corpus location
+            examples_dir = rag_status.get('examples_directory', 'Unknown')
+            st.code(f"Corpus Path: {examples_dir}", language="bash")
 
-            if indices.get("vector_index_name"):
-                st.markdown(f"**Vector Index Name:** {indices['vector_index_name']}")
-            if indices.get("vector_namespace"):
-                st.markdown(f"**Vector Namespace:** {indices['vector_namespace']}")
+            # Index Details
+            st.markdown("### 🔗 Search Index Details")
 
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown("**BM25 Index (Keyword Search)**")
+                if rag_status.get('bm25_search_available'):
+                    st.success("✅ Active - Fast keyword-based retrieval")
+                    st.info(f"📊 Indexed: {rag_status.get('total_chunks', 0)} code patterns")
+                else:
+                    st.error("❌ Not available")
+
+            with col2:
+                st.markdown("**Vector Index (Semantic Search)**")
+                if rag_status.get('vector_search_available'):
+                    st.success("✅ Active - Pinecone semantic search")
+                    import os
+                    pinecone_index = os.getenv("PINECONE_INDEX", "rag-index")
+                    st.info(f"📦 Index: `{pinecone_index}`")
+                    st.info(f"🏷️ Namespace: `html-css-examples`")
+                    st.info(f"🔢 Vectors: {rag_status.get('total_chunks', 0)}")
+                else:
+                    st.error("❌ Not available - Check PINECONE_API_KEY")
+
+            # Agents Status
+            st.markdown("### 🤖 Agents Status")
+
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.markdown("**Visual Agent**")
+                try:
+                    # Check if visual agent is accessible via A2A agent-card endpoint
+                    import httpx
+                    from src.config import visual_agent_url
+                    try:
+                        response = httpx.get(f"{visual_agent_url}/.well-known/agent-card.json", timeout=2.0)
+                        if response.status_code == 200:
+                            st.success("✅ Running")
+                            st.info(f"🌐 URL: {visual_agent_url}")
+                        else:
+                            st.warning(f"⚠️ Response: {response.status_code}")
+                    except:
+                        st.error("❌ Not reachable")
+                        st.info(f"🌐 URL: {visual_agent_url}")
+                except Exception as e:
+                    st.error("❌ Error checking status")
+
+            with col2:
+                st.markdown("**Code Agent**")
+                try:
+                    from src.config import code_agent_url
+                    try:
+                        response = httpx.get(f"{code_agent_url}/.well-known/agent-card.json", timeout=2.0)
+                        if response.status_code == 200:
+                            st.success("✅ Running")
+                            st.info(f"🌐 URL: {code_agent_url}")
+                        else:
+                            st.warning(f"⚠️ Response: {response.status_code}")
+                    except:
+                        st.error("❌ Not reachable")
+                        st.info(f"🌐 URL: {code_agent_url}")
+                except Exception as e:
+                    st.error("❌ Error checking status")
+
+            with col3:
+                st.markdown("**RAG Agent**")
+                if rag_agent and rag_status.get('status') == 'ready':
+                    st.success("✅ Ready")
+                    st.info(f"📚 {rag_status.get('total_documents', 0)} docs loaded")
+                else:
+                    st.error("❌ Not initialized")
+
+            # Configuration
             st.markdown("### ⚙️ Configuration")
-            config = status["config"]
-            st.json(config)
+            config_info = {
+                "project_root": str(project_dir()),
+                "websight_data_dir": str(project_dir() / "data" / "websight"),
+                "html_patterns_dir": examples_dir,
+                "rag_agent_initialized": rag_agent is not None,
+                "total_html_patterns": rag_status.get('total_documents', 0),
+                "pinecone_configured": rag_status.get('vector_search_available', False),
+            }
+            st.json(config_info)
+
+            # Optional: Show PDF corpus status if available
+            status = get_system_status(pipeline)
+            if status and status["corpus"]["total_documents"] > 0:
+                st.markdown("---")
+                st.markdown("### 📄 Additional PDF Corpus (Optional)")
+                st.info("Legacy PDF corpus for general knowledge retrieval (not used for HTML generation)")
+                corpus = status["corpus"]
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("PDF Documents", corpus["total_documents"])
+                with col2:
+                    st.metric("PDF Chunks", corpus["total_chunks"])
+        else:
+            st.error("❌ RAG Agent not available. Please restart the application.")
 
     # ---------------------------- CORPUS INFORMATION ------------------------ #
     elif page == "Corpus Information":
-        st.header("📚 Corpus Information")
+        st.header("📚 HTML/CSS Pattern Corpus Information")
+        st.markdown("Information about the WebSight dataset used for pattern-based code generation.")
 
+        # Add refresh button to clear cache
+        if st.button("🔄 Refresh Corpus Information"):
+            st.cache_resource.clear()
+            st.rerun()
+
+        # Get RAG Agent status (HTML patterns)
+        rag_agent = initilize_rag_agent()
+        if rag_agent:
+            rag_status = rag_agent.get_rag_status()
+
+            if rag_status.get('status') == 'ready':
+                st.markdown("### 📊 Corpus Summary")
+                c1, c2, c3, c4 = st.columns(4)
+                with c1:
+                    st.metric("HTML Documents", rag_status.get('total_documents', 0))
+                with c2:
+                    st.metric("Code Patterns", rag_status.get('total_chunks', 0))
+                with c3:
+                    vector_available = "✅ Yes" if rag_status.get('vector_search_available') else "❌ No"
+                    st.metric("Vector Search (Pinecone)", vector_available)
+                with c4:
+                    bm25_available = "✅ Yes" if rag_status.get('bm25_search_available') else "❌ No"
+                    st.metric("BM25 Search", bm25_available)
+
+                # Show Pinecone details if available
+                if rag_status.get('vector_search_available'):
+                    st.markdown("### 🔗 Vector Search Details")
+                    import os
+                    pinecone_index = os.getenv("PINECONE_INDEX", "rag-index")
+                    pinecone_namespace = "html-css-examples"
+
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.code(f"Index: {pinecone_index}", language="text")
+                        st.code(f"Namespace: {pinecone_namespace}", language="text")
+                    with col2:
+                        st.code(f"Vectors: {rag_status.get('total_chunks', 0)}", language="text")
+                        st.code(f"Model: sentence-transformers/all-MiniLM-L6-v2", language="text")
+
+                    st.info("💡 Vector search uses Pinecone for fast semantic similarity search across all HTML patterns.")
+
+                st.markdown("### 📁 Corpus Location")
+                st.code(rag_status.get('examples_directory', 'Unknown'), language="bash")
+
+                st.markdown("### 🔍 Pattern Types")
+                st.markdown("""
+                The corpus contains HTML/CSS examples from the WebSight dataset covering:
+                - **Landing pages** - Hero sections, CTAs, features
+                - **Dashboards** - Sidebars, stat cards, data tables
+                - **Navigation** - Headers, menus, breadcrumbs
+                - **Forms** - Input fields, validation, layouts
+                - **Cards & Components** - Reusable UI patterns
+                - **Responsive layouts** - Mobile-first designs
+                """)
+
+                # Show WebSight data location
+                st.markdown("### 📦 Source Data")
+                websight_dir = project_dir() / "data" / "websight"
+                st.markdown(f"**WebSight JSON files:** `{websight_dir}`")
+
+                # Count JSON files
+                try:
+                    import json
+                    json_files = list(websight_dir.glob("websight_*.json"))
+                    total_rows = 0
+                    valid_files = 0
+                    for json_file in json_files:
+                        try:
+                            with open(json_file, 'r') as f:
+                                data = json.load(f)
+                                rows = len(data.get('rows', []))
+                                if rows > 0:
+                                    total_rows += rows
+                                    valid_files += 1
+                        except:
+                            pass
+
+                    st.markdown(f"- **JSON files:** {len(json_files)} total ({valid_files} valid)")
+                    st.markdown(f"- **Total HTML examples:** ~{total_rows} available")
+                    st.markdown(f"- **Currently loaded:** {rag_status.get('total_documents', 0)} documents")
+                except Exception as e:
+                    st.warning(f"Could not read WebSight directory: {e}")
+
+                st.markdown("### 🎯 Usage")
+                st.info("""
+                This corpus is automatically used when:
+                1. **UI to Code**: Upload an image → Visual analysis → RAG retrieves similar patterns → Code generated
+                2. **RAG Search**: Search for HTML patterns by description
+                3. **Prompt → HTML**: Describe UI → RAG finds similar examples → Code generated
+                """)
+            else:
+                st.error("RAG system not ready. Please check system status.")
+                st.json(rag_status)
+        else:
+            st.error("RAG Agent not available. Please restart the application.")
+
+        # Optional: Show PDF corpus info if available
         status = get_system_status(pipeline)
         if status and status["corpus"]["documents"]:
+            st.markdown("---")
+            st.markdown("### 📄 PDF Corpus (Optional)")
+            st.info("Additional PDF documents can be added to the corpus for general knowledge retrieval.")
             corpus = status["corpus"]
-
-            st.markdown("### Summary")
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                st.metric("Total Documents", corpus["total_documents"])
-            with c2:
-                st.metric("Total Chunks", corpus["total_chunks"])
-            with c3:
-                avg_chunks = corpus["total_chunks"] / corpus["total_documents"] if corpus["total_documents"] > 0 else 0
-                st.metric("Avg Chunks per Doc", f"{avg_chunks:.1f}")
-
-            st.markdown("### Document Details")
-            for i, doc in enumerate(corpus["documents"]):
-                with st.expander(f"Document {i+1}: {Path(doc['source']).name}"):
-                    st.markdown(f"**Document ID:** `{doc['doc_id']}`")
-                    st.markdown(f"**Source:** {doc['source']}")
-                    if doc.get("page"):
-                        st.markdown(f"**Page:** {doc['page']}")
-                    st.markdown(f"**Chunks:** {doc['chunk_count']}")
-                    st.markdown("**Preview:**")
-                    st.text(doc["text_preview"])
-        else:
-            st.warning("No documents found in corpus or system not initialized.")
-            if status:
-                st.markdown(f"**Corpus Path:** {status['corpus']['corpus_path']}")
+            st.markdown(f"**PDF Documents:** {corpus['total_documents']}")
+            st.markdown(f"**Total Chunks:** {corpus['total_chunks']}")
 
 
 if __name__ == "__main__":

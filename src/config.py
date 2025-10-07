@@ -99,6 +99,7 @@ rag_ingestion_dir = make_dir_function(config["rag"]["ingestion_dir"])
 rag_retrievers_dir = make_dir_function(config["rag"]["retrievers_dir"])
 rag_evaluators_dir = make_dir_function(config["rag"]["evaluators_dir"])
 rag_core_dir = make_dir_function(config["rag"]["core_dir"])
+rag_ce_model = config["rag"]["ce_model"]
 
 # Application paths
 app_main_file = make_dir_function(config["app"]["main_file"])
@@ -143,12 +144,26 @@ pinecone_model_name = config["pinecone"]["model_name"]
 pinecone_cloud = config["pinecone"]["cloud"]
 pinecone_region = config["pinecone"]["region"]
 pinecone_namespace = config["pinecone"]["namespace"]
+pinecone_rag_namespace = config["pinecone"]["rag_namespace"]
+
+# Sentence Transformers configuration
+st_model_name = config["sentence_transformers"]["model_name"]
 
 # Env variables
 try:
     pinecone_api_key = os.environ["PINECONE_API_KEY"]
+    print("✅ PINECONE_API_KEY loaded from environment variables.")
+    host = os.environ.get("HOST", "")
+    print(f"✅ HOST set to '{host}'")
 except KeyError:
     raise ValueError("PINECONE_API_KEY not set in environment variables.")
+
+# Post-load
+if host == "localhost":
+    config["agents_endpoints"]["visual_agent_url"] = "http://localhost:10000"
+    config["agents_endpoints"]["code_agent_url"] = "http://localhost:10001"
+    visual_agent_url = "http://localhost:10000"
+    code_agent_url = "http://localhost:10001"
 
 logger.info("Configuration loaded successfully")
 logger.debug(f"Configuration: {json.dumps(config, indent=2)}")
