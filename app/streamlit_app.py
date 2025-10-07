@@ -676,11 +676,11 @@ def main():
             with col1:
                 st.markdown("**Visual Agent**")
                 try:
-                    # Check if visual agent is accessible
+                    # Check if visual agent is accessible via A2A agent-card endpoint
                     import httpx
                     from src.config import visual_agent_url
                     try:
-                        response = httpx.get(f"{visual_agent_url}/.well-known/agent-card", timeout=2.0)
+                        response = httpx.get(f"{visual_agent_url}/.well-known/agent-card.json", timeout=2.0)
                         if response.status_code == 200:
                             st.success("✅ Running")
                             st.info(f"🌐 URL: {visual_agent_url}")
@@ -697,7 +697,7 @@ def main():
                 try:
                     from src.config import code_agent_url
                     try:
-                        response = httpx.get(f"{code_agent_url}/.well-known/agent-card", timeout=2.0)
+                        response = httpx.get(f"{code_agent_url}/.well-known/agent-card.json", timeout=2.0)
                         if response.status_code == 200:
                             st.success("✅ Running")
                             st.info(f"🌐 URL: {code_agent_url}")
@@ -806,7 +806,6 @@ def main():
 
                 # Show WebSight data location
                 st.markdown("### 📦 Source Data")
-                from src.config import project_dir
                 websight_dir = project_dir() / "data" / "websight"
                 st.markdown(f"**WebSight JSON files:** `{websight_dir}`")
 
