@@ -75,16 +75,12 @@ class VisualAgentWithGuardrails:
         )
 
     def invoke(self, image: Image) -> Dict[str, Any]:
-        logger.debug(f"Calling invoke with image size {image.size}")
-
         raw: Dict[str, Any] = self.agent.invoke(image)
         raw = self._normalize(raw)
         try:
-            logger.debug(f"Resultado sin validar (normalizado): {raw}")
             validated = self._build_guard().parse(json.dumps(raw))
             validated_str = self._coerce_guard_output_to_str(validated)
             spec: Dict[str, Any] = json.loads(validated_str)
-            logger.debug(f"Validated result: {spec}")
             return spec
 
         except Exception as e:

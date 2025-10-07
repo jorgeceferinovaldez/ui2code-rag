@@ -31,7 +31,7 @@ class VisualA2AAgentExecutor(AgentExecutor):
         self.agent = VisualAgentWithGuardrails(VisualAgent())
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
-        logger.debug("Executing Visual Agent")
+        logger.info("Executing Visual Agent")
         try:
             base64_image, mime = self._get_base64_image_from_context(context)
             image = self._load_image_from_base64(base64_image)

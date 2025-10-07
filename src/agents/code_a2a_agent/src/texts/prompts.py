@@ -2,7 +2,7 @@ SYSTEM_PROMPT = "You are an expert HTML/CSS developer specializing in modern, cl
 
 GENERATION_PROMPT_TEMPLATE = """Tu tarea es generar código HTML/Tailwind CSS que replique EXACTAMENTE el diseño analizado.
 
-⚠️ REGLA CRÍTICA: Genera SOLO los componentes que están en el análisis visual. NO inventes secciones adicionales.
+REGLA CRÍTICA: Genera SOLO los componentes que están en el análisis visual. NO inventes secciones adicionales.
 
 1. ANÁLISIS VISUAL DEL DISEÑO (ESTO ES LO QUE DEBES GENERAR):
    - Componentes identificados: {components}
@@ -26,7 +26,7 @@ METODOLOGÍA ESTRICTA DE GENERACIÓN:
 4. **ADAPTA colores y textos** al análisis visual
 5. **APLICA instrucciones adicionales** si las hay
 
-⚠️ VALIDACIÓN CRÍTICA:
+VALIDACIÓN CRÍTICA:
 - ¿El análisis menciona "header"? → Solo entonces genera <header>
 - ¿El análisis menciona "navigation"? → Solo entonces genera <nav>
 - ¿El análisis menciona "footer"? → Solo entonces genera <footer>
@@ -58,7 +58,7 @@ REQUISITOS TÉCNICOS:
 - Accesibilidad básica (alt, aria-label)
 - Sin JavaScript
 
-⚠️ CRÍTICO: Si el análisis visual solo menciona un formulario de login, NO generes una landing page completa. Genera EXACTAMENTE lo analizado.
+CRÍTICO: Si el análisis visual solo menciona un formulario de login, NO generes una landing page completa. Genera EXACTAMENTE lo analizado.
 
 Responde SOLO con el código HTML completo, sin explicaciones adicionales.
 """

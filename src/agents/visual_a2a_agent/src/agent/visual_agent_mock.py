@@ -3,12 +3,14 @@
 import json
 from typing import Any
 from PIL import Image
+from loguru import logger
 
 
 class VisualAgentMock:
     SUPPORTED_CONTENT_TYPES = ["text", "text/plain"]
 
     def invoke(self, image: Image) -> dict[str, Any]:
+        logger.info("VisualAgentMock invoked")
         response_text = """
         {
         "components": [

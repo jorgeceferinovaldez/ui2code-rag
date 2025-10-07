@@ -25,47 +25,24 @@ class CodeA2AAgentExecutor(AgentExecutor):
 
     async def cancel(self, context: RequestContext) -> None:
         """Required by AgentExecutor; this agent has no long-running tasks."""
-        logger.debug("Cancel called (no-op).")
+        logger.error("Cancellation requested but not supported.")
+        raise NotImplementedError("Cancellation not supported")
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
         msg = context.message
         raw_parts = getattr(msg, "parts", []) or []
         parts = self._normalize_parts(raw_parts)
 
-        # Debug: show what actually arrived
-        try:
-            dbg = [{"kind": p.get("kind"), "meta": p.get("metadata"), "has_text": bool(p.get("text"))} for p in parts]
-            logger.debug("Incoming message parts (normalized): {}", dbg)
-        except Exception:
-            logger.debug("Could not log normalized parts.")
+        analysis_result_raw = self.pick_text(parts, "analysis_result")
+        patterns_raw = self.pick_text(parts, "patterns")
+        custom_instr = self.pick_text(parts, "custom_instructions") or ""
 
-        def pick_text(meta_type: Optional[str]) -> Optional[str]:
-            """Pick the first text part, optionally filtered by metadata.type."""
-            for p in parts:
-                if p.get("kind") != "text":
-                    continue
-                meta = p.get("metadata") or {}
-                if meta_type is None or meta.get("type") == meta_type:
-                    t = p.get("text")
-                    if t:
-                        return t
-            return None
-
-        # Try to extract inputs
-        analysis_result_raw = pick_text("analysis_result")
-        patterns_raw = pick_text("patterns")
-        custom_instr = pick_text("custom_instructions") or ""
-
-        # Prompt: first try the labeled part…
-        prompt_text = pick_text("prompt")
-        # …then any text part…
+        prompt_text = self.pick_text(parts, "prompt")
         if not prompt_text:
-            prompt_text = pick_text(None)
-        # …finally, fall back to message-level text if the transport placed it there
+            prompt_text = self.pick_text(parts, None)
         if not prompt_text:
             prompt_text = getattr(msg, "text", None)
 
-        # Parse patterns safely
         patterns: List[Any] = []
         if patterns_raw:
             try:
@@ -74,7 +51,6 @@ class CodeA2AAgentExecutor(AgentExecutor):
                 logger.warning("Failed to parse 'patterns' JSON. Continuing with empty list.")
                 patterns = []
 
-        # Parse analysis safely
         analysis_result: Optional[Dict[str, Any]] = None
         if analysis_result_raw:
             try:
@@ -83,25 +59,24 @@ class CodeA2AAgentExecutor(AgentExecutor):
                 logger.warning("Failed to parse 'analysis_result' JSON. Using empty dict.")
                 analysis_result = {}
 
-        # Route 1: Prompt-only
         if prompt_text and not analysis_result:
-            logger.debug("CodeAgentExecutor: prompt-only mode")
             result = self.agent.invoke_from_prompt(
                 prompt_text=prompt_text,
                 patterns=patterns,
                 custom_instructions=custom_instr,
             )
+            logger.success("Code Agent result (invoke_from_prompt) {}", result)
             await event_queue.enqueue_event(new_agent_text_message(json.dumps(result, ensure_ascii=False)))
             return
 
         # Route 2: Visual + patterns
         if analysis_result is not None:
-            logger.debug("CodeAgentExecutor: visual+patterns mode")
             result = self.agent.invoke(
                 patterns=patterns,
                 visual_analysis=analysis_result,
                 custom_instructions=custom_instr,
             )
+            logger.success("Code Agent result (invoke): {}", result)
             await event_queue.enqueue_event(new_agent_text_message(json.dumps(result, ensure_ascii=False)))
             return
 
@@ -152,3 +127,16 @@ class CodeA2AAgentExecutor(AgentExecutor):
                 }
             )
         return norm
+
+    @staticmethod
+    def pick_text(parts: List[Dict[str, Any]], meta_type: Optional[str]) -> Optional[str]:
+        """Pick the first text part, optionally filtered by metadata.type."""
+        for p in parts:
+            if p.get("kind") != "text":
+                continue
+            meta = p.get("metadata") or {}
+            if meta_type is None or meta.get("type") == meta_type:
+                t = p.get("text")
+                if t:
+                    return t
+        return None

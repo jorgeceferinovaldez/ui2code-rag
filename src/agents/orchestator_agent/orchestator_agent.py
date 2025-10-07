@@ -22,10 +22,12 @@ from io import BytesIO
 
 # Local dependencies
 from src.agents.rag_agent.rag_agent import RAGAgent
-from src.config import visual_agent_url, code_agent_url
+from src.config import visual_agent_url, code_agent_url, server_timeout_keep_alive, server_connect_timeout
 
 VISUAL_AGENT_URL = visual_agent_url
 CODE_AGENT_URL = code_agent_url
+SERVER_TIMEOUT_KEEP_ALIVE = server_timeout_keep_alive
+SERVER_CONNECT_TIMEOUT = server_connect_timeout
 
 
 class OrchestratorAgent:
@@ -44,7 +46,7 @@ class OrchestratorAgent:
     async def initialize(self) -> None:
         """Initialize HTTP client and fetch both agents' cards."""
         logger.info("Initializing HTTP client")
-        timeout = httpx.Timeout(60.0, connect=10.0)
+        timeout = httpx.Timeout(SERVER_TIMEOUT_KEEP_ALIVE, connect=SERVER_CONNECT_TIMEOUT)
         self.httpx_client = httpx.AsyncClient(timeout=timeout)
 
         for agent_name, agent_info in self.agents.items():
@@ -314,8 +316,8 @@ class OrchestratorAgent:
         """Test function: visual → patterns → code, and prompt-only → code."""
         logger.info("Starting Orchestrator Agent test process")
         orchestrator = OrchestratorAgent(
-            visual_url=VISUAL_AGENT_URL,
-            code_url=CODE_AGENT_URL,
+            visual_url="http://localhost:10000",
+            code_url="http://localhost:10001",
         )
         await orchestrator.initialize()
         rag_agent: RAGAgent = orchestrator.get_agent_client("rag")
