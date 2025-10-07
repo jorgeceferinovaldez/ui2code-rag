@@ -3,15 +3,25 @@ Dynamic Path Configuration System for UI-to-Code Multi-Agent System
 Based on pyprojroot and YAML configuration for flexible project structure management
 """
 
+import json
+from dotenv import load_dotenv
 from loguru import logger
 import yaml
 from pyprojroot import here
 from pathlib import Path
-from typing import Union, Callable, Iterable, Dict, Any
+from typing import Union, Callable, Iterable, Any
 import os
 
+ROOT_DIR: Path = here()
+env_file_path = ROOT_DIR / ".env"
+env_file = str(env_file_path)
 
-def load_config(config_path: str = "config.yaml") -> Dict[str, Any]:
+if env_file_path.exists():
+    load_dotenv(env_file)  # Load environment variables from .env file
+    logger.warning(f"Using .env file at {env_file_path.resolve()} for configuration.")
+
+
+def load_config(config_path: str = "config.yaml") -> dict[str, Any]:
     """
     Load configuration from config.yaml
 
@@ -89,9 +99,11 @@ rag_ingestion_dir = make_dir_function(config["rag"]["ingestion_dir"])
 rag_retrievers_dir = make_dir_function(config["rag"]["retrievers_dir"])
 rag_evaluators_dir = make_dir_function(config["rag"]["evaluators_dir"])
 rag_core_dir = make_dir_function(config["rag"]["core_dir"])
+rag_ce_model = config["rag"]["ce_model"]
 
 # Application paths
 app_main_file = make_dir_function(config["app"]["main_file"])
+streamlit_port = config["app"].get("streamlit_port", 8501)
 
 # Source code structure (only existing)
 agents_dir = make_dir_function(config["src"]["agents_dir"])
@@ -126,7 +138,35 @@ run_streamlit_file = make_dir_function(config["files"]["run_streamlit_file"])
 visual_agent_url = config["agents_endpoints"]["visual_agent_url"]
 code_agent_url = config["agents_endpoints"]["code_agent_url"]
 
+# Pinecone configuration
+pinecone_index = config["pinecone"]["index"]
+pinecone_model_name = config["pinecone"]["model_name"]
+pinecone_cloud = config["pinecone"]["cloud"]
+pinecone_region = config["pinecone"]["region"]
+pinecone_namespace = config["pinecone"]["namespace"]
+pinecone_rag_namespace = config["pinecone"]["rag_namespace"]
+
+# Sentence Transformers configuration
+st_model_name = config["sentence_transformers"]["model_name"]
+
+# Env variables
+try:
+    pinecone_api_key = os.environ["PINECONE_API_KEY"]
+    print("✅ PINECONE_API_KEY loaded from environment variables.")
+    host = os.environ.get("HOST", "")
+    print(f"✅ HOST set to '{host}'")
+except KeyError:
+    raise ValueError("PINECONE_API_KEY not set in environment variables.")
+
+# Post-load
+if host == "localhost":
+    config["agents_endpoints"]["visual_agent_url"] = "http://localhost:10000"
+    config["agents_endpoints"]["code_agent_url"] = "http://localhost:10001"
+    visual_agent_url = "http://localhost:10000"
+    code_agent_url = "http://localhost:10001"
+
 logger.info("Configuration loaded successfully")
+logger.debug(f"Configuration: {json.dumps(config, indent=2)}")
 
 
 def get_path(key: str, *args) -> Path:
@@ -172,15 +212,3 @@ def create_all_directories() -> None:
         ensure_dir_exists(dir_func)
 
     print("✅ All directories created successfully")
-
-
-if __name__ == "__main__":
-    # Test the configuration
-    print("Configuration loaded successfully!")
-    print(f"Project root: {project_dir()}")
-    print(f"UI examples dir: {ui_examples_dir()}")
-    print(f"Corpus dir: {corpus_dir()}")
-    print(f"Docs dir: {docs_dir()}")
-
-    # Create all directories
-    create_all_directories()

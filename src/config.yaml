@@ -10,10 +10,12 @@ rag:
   retrievers_dir: "src/rag/retrievers"
   evaluators_dir: "src/rag/evaluators"
   core_dir: "src/rag/core"
+  ce_model: "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 # Application paths
 app:
-  main_file: "app/streamlit_app.py"
+  main_file: "src/app/streamlit_app.py"
+  streamlit_port: 8501
 
 # Source code structure
 src:
@@ -50,5 +52,16 @@ files:
 
 # Agent service URLs
 agents_endpoints:
-  visual_agent_url: "http://localhost:10000"
-  code_agent_url: "http://localhost:10001"
+  visual_agent_url: "http://visual-agent:10000"
+  code_agent_url: "http://code-agent:10001"
+
+pinecone:
+  index: "rag-index"
+  model_name: "text-embedding-ada-002"
+  cloud: "aws"
+  region: "us-east-1"
+  namespace: "default"
+  rag_namespace: "html-css-examples"
+
+sentence_transformers:
+  model_name: "sentence-transformers/all-MiniLM-L6-v2"

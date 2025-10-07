@@ -1,5 +1,7 @@
 """Orchestrator Agent that coordinates between Visual and Code Agents, and integrates RAG for context."""
 
+# TODO: Refactor constants (timeouts, URLs) to config
+import json
 from loguru import logger
 import base64, json, httpx, asyncio, time
 from pathlib import Path
@@ -16,23 +18,14 @@ from a2a.types import (
 )
 from a2a.utils import get_message_text, get_text_parts
 from PIL import Image
+from io import BytesIO
 
+# Local dependencies
 from src.agents.rag_agent.rag_agent import RAGAgent
 from src.config import visual_agent_url, code_agent_url
 
 VISUAL_AGENT_URL = visual_agent_url
 CODE_AGENT_URL = code_agent_url
-
-# Target timeouts (used to tune HTTPX / transports; not passed to send_message)
-TARGET_TIMEOUTS = {
-    "visual": 180.0,
-    "code": 120.0,
-}
-
-# Wide HTTPX timeouts for long/streaming requests
-HTTPX_CONNECT_TIMEOUT = 10.0
-HTTPX_READ_TIMEOUT    = 240.0
-HTTPX_WRITE_TIMEOUT   = 240.0
 
 
 class OrchestratorAgent:
@@ -48,14 +41,36 @@ class OrchestratorAgent:
             "rag": {"url": None, "card": None, "client": self.rag_agent},
         }
 
-    # --- helpers (optional, keep inside the class) ---
-    def _safe_json(self, obj) -> str:
-        import json
-        return json.dumps(obj, ensure_ascii=False)
+    async def initialize(self) -> None:
+        """Initialize HTTP client and fetch both agents' cards."""
+        logger.info("Initializing HTTP client")
+        timeout = httpx.Timeout(60.0, connect=10.0)
+        self.httpx_client = httpx.AsyncClient(timeout=timeout)
+
+        for agent_name, agent_info in self.agents.items():
+            url = agent_info["url"]
+            if url:
+                resolver = A2ACardResolver(
+                    httpx_client=self.httpx_client,
+                    base_url=url,
+                )
+                try:
+                    card: AgentCard = await resolver.get_agent_card()
+                    self.agents[agent_name]["card"] = card
+                    self.agents[agent_name]["client"] = A2AClient(
+                        httpx_client=self.httpx_client,
+                        agent_card=card,
+                    )
+                    logger.info(f"Fetched {agent_name} agent card: {card.name} v{card.version}")
+                except Exception as e:
+                    logger.error(
+                        f"Critical error fetching {agent_name} agent card: {e}",
+                        exc_info=True,
+                    )
+                    raise RuntimeError(f"Failed to fetch {agent_name} agent card. Cannot continue.") from e
 
     def _serialize_patterns(self, patterns) -> str:
         """Ensure patterns are JSON-serializable (tuples -> lists)."""
-        import json
         if not patterns:
             return "[]"
         try:
@@ -71,83 +86,6 @@ class OrchestratorAgent:
                 return json.dumps(safe, ensure_ascii=False)
             except Exception:
                 return "[]"
-            
-    async def initialize(self) -> None:
-        """Initialize HTTP client and fetch both agents' cards."""
-        logger.info("Initializing HTTP client")
-        timeout = httpx.Timeout(
-            connect=HTTPX_CONNECT_TIMEOUT,
-            read=HTTPX_READ_TIMEOUT,
-            write=HTTPX_WRITE_TIMEOUT,
-            pool=None,
-        )
-        self.httpx_client = httpx.AsyncClient(timeout=timeout)
-
-        # Exponential backoff to fetch agent cards (handles slow starts)
-        for agent_name, agent_info in self.agents.items():
-            url = agent_info["url"]
-            if not url:
-                continue
-
-            resolver = A2ACardResolver(httpx_client=self.httpx_client, base_url=url)
-            last_err: Optional[Exception] = None
-
-            for attempt in range(1, 8):
-                try:
-                    card: AgentCard = await resolver.get_agent_card()
-                    client = A2AClient(httpx_client=self.httpx_client, agent_card=card)
-                    self.agents[agent_name]["card"] = card
-                    self.agents[agent_name]["client"] = client
-
-                    # Best-effort transport timeout tuning (version-dependent internals)
-                    self._tune_a2a_transport_timeout(client, TARGET_TIMEOUTS.get(agent_name, 120.0))
-                    logger.info(f"{agent_name} agent card fetched OK on attempt {attempt}")
-                    break
-                except Exception as e:
-                    last_err = e
-                    wait = min(0.5 * (2 ** (attempt - 1)), 5.0)
-                    logger.warning(
-                        f"Failed to fetch {agent_name} agent card (attempt {attempt}): {e}. Retrying in {wait}s..."
-                    )
-                    await asyncio.sleep(wait)
-            else:
-                logger.error(
-                    f"Critical error fetching {agent_name} agent card: {last_err}",
-                    exc_info=True,
-                )
-                raise RuntimeError(f"Failed to fetch {agent_name} agent card. Cannot continue.") from last_err
-
-    @staticmethod
-    def _tune_a2a_transport_timeout(client: A2AClient, seconds: float) -> None:
-        """
-        Best-effort: adjust the JSON-RPC transport timeout used by A2AClient.
-        Different library versions expose different attributes.
-        """
-        try:
-            transport = getattr(client, "_transport", None) or getattr(client, "transport", None)
-            if transport is None:
-                logger.debug("A2AClient transport not found for timeout tuning.")
-                return
-
-            set_ok = False
-            for attr in ("_timeout", "timeout", "_request_timeout", "request_timeout"):
-                if hasattr(transport, attr):
-                    setattr(transport, attr, float(seconds))
-                    logger.debug(f"A2A transport timeout set via '{attr}' = {seconds}s")
-                    set_ok = True
-                    break
-            if not set_ok and hasattr(transport, "set_timeout"):
-                try:
-                    transport.set_timeout(float(seconds))  # type: ignore[attr-defined]
-                    logger.debug("A2A transport timeout set via set_timeout(...)")
-                    set_ok = True
-                except Exception:
-                    pass
-
-            if not set_ok:
-                logger.debug("Could not set A2A transport timeout; relying on HTTPX timeouts only.")
-        except Exception as e:
-            logger.debug(f"Timeout tuning skipped due to: {e}")
 
     def _dump_response_safe(self, response) -> str:
         try:
@@ -159,6 +97,9 @@ class OrchestratorAgent:
                 return str(response)[:10000]
             except Exception:
                 return "<unprintable response>"
+
+    def _safe_json(self, obj) -> str:
+        return json.dumps(obj, ensure_ascii=False)
 
     def get_agent_client(self, agent_name: str) -> A2AClient | RAGAgent:
         client = self.agents.get(agent_name, {}).get("client")
@@ -187,6 +128,7 @@ class OrchestratorAgent:
 
         t0 = time.perf_counter()
         try:
+            logger.debug(f"[{agent_name}] Sending message to agent...")
             response: SendMessageResponse = await client.send_message(request)
             dt = time.perf_counter() - t0
             try:
@@ -243,7 +185,7 @@ class OrchestratorAgent:
         dump = self._dump_response_safe(response)
         logger.error(f"Failed to decode JSON from visual analysis response. Dump: {dump[:1200]}")
         raise ValueError("Invalid JSON in visual analysis response")
-       # --- PUBLIC: visual-analysis -> code ---
+
     async def send_message_to_code_agent(
         self,
         patterns: list | None,
@@ -251,9 +193,6 @@ class OrchestratorAgent:
         custom_instructions: str = "",
     ) -> dict:
         """Send analysis_result + patterns to the Code Agent (UI image → code)."""
-        from uuid import uuid4
-        from a2a.utils import get_message_text
-
         msg_parts = [
             {"kind": "text", "metadata": {"type": "analysis_result"}, "text": self._safe_json(analysis_result or {})},
             {"kind": "text", "metadata": {"type": "patterns"}, "text": self._serialize_patterns(patterns or [])},
@@ -274,7 +213,6 @@ class OrchestratorAgent:
             return json.loads(text) if text else {"error": "Empty response from Code Agent"}
         return {"error": "Invalid response from Code Agent"}
 
-    # --- PUBLIC: prompt-only -> code ---
     async def send_prompt_to_code_agent(
         self,
         prompt_text: str,
@@ -282,9 +220,6 @@ class OrchestratorAgent:
         custom_instructions: str = "",
     ) -> dict:
         """Send a natural-language prompt (no visual analysis) to the Code Agent."""
-        from uuid import uuid4
-        from a2a.utils import get_message_text
-
         try:
             msg_parts = [
                 {"kind": "text", "metadata": {"type": "prompt"}, "text": prompt_text or ""},
@@ -292,6 +227,13 @@ class OrchestratorAgent:
                 {"kind": "text", "metadata": {"type": "custom_instructions"}, "text": custom_instructions or ""},
             ]
 
+            payload = {
+                "message": {
+                    "role": "user",
+                    "parts": msg_parts,
+                    "messageId": uuid4().hex,
+                }
+            }
             payload = {
                 "message": {
                     "role": "user",
@@ -324,7 +266,6 @@ class OrchestratorAgent:
         """Send an image to the Visual Agent and return the analysis result."""
         # Re-encode + downscale for latency and stability
         try:
-            from io import BytesIO
             with Image.open(img_path) as im:
                 im = im.convert("RGB")
                 max_side = 1280
@@ -367,6 +308,7 @@ class OrchestratorAgent:
             dump = self._dump_response_safe(response)
             raise RuntimeError(f"Invalid response from Visual Agent. Dump: {dump[:1500]}")
 
+
     @staticmethod
     async def test_process() -> None:
         """Test function: visual → patterns → code, and prompt-only → code."""
@@ -378,7 +320,6 @@ class OrchestratorAgent:
         await orchestrator.initialize()
         rag_agent: RAGAgent = orchestrator.get_agent_client("rag")
 
-        # ---- VISUAL -> CODE (unchanged) ----
         logger.info("Sending test message to Visual Agent...")
         image_uri = "E:/Documentos/Git Repositories/ui2code-rag/tests/test_image.png"
         with open(image_uri, "rb") as image_file:
@@ -388,12 +329,17 @@ class OrchestratorAgent:
             "message": {
                 "role": "user",
                 "parts": [
-                    {"kind": "file", "file": {"name": "test_image.jpg", "mimeType": "image/jpeg", "bytes": base64_image}},
+                    {
+                        "kind": "file",
+                        "file": {"name": "test_image.jpg", "mimeType": "image/jpeg", "bytes": base64_image},
+                    },
                 ],
                 "messageId": uuid4().hex,
             },
         }
-        response_visual: SendMessageResponse = await orchestrator._send_message_to_agent("visual", send_message_payload_visual)
+        response_visual: SendMessageResponse = await orchestrator._send_message_to_agent(
+            "visual", send_message_payload_visual
+        )
         logger.info("Received response from Visual Agent")
         logger.debug(response_visual.model_dump(mode="json", exclude_none=True))
         assert orchestrator._validate_response(response_visual)
@@ -424,15 +370,10 @@ class OrchestratorAgent:
         code_result = get_message_text(response_code.root.result)
         logger.info(f"Code Agent result: {code_result}")
 
-        # ---- PROMPT-ONLY -> CODE (NEW) ----
-        logger.info("Sending prompt-only test to Code Agent...")
-        prompt_text = "Landing page hero section with a navbar, big headline, CTA button, and feature cards. Tailwind only."
-        response_prompt = await orchestrator.send_prompt_to_code_agent(prompt_text, patterns=[], custom_instructions="mobile-first")
-        logger.info(f"Prompt-only Code Agent result: {response_prompt.get('status', 'OK')}")
-
         await orchestrator.close()
 
 
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(OrchestratorAgent.test_process())
