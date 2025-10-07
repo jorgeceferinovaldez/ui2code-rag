@@ -181,6 +181,7 @@ class CodeAgent:
             if not cleaned_code:
                 cleaned_code = self._get_fallback_html()
 
+            # Validate that generated HTML matches expected components
             raw_components = visual_analysis.get("components", [])
             validation_result = self._validate_html_components(cleaned_code, raw_components)
 

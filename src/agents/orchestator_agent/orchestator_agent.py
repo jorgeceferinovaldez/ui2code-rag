@@ -234,6 +234,13 @@ class OrchestratorAgent:
                     "messageId": uuid4().hex,
                 }
             }
+            payload = {
+                "message": {
+                    "role": "user",
+                    "parts": msg_parts,
+                    "messageId": uuid4().hex,
+                }
+            }
 
             resp = await self._send_message_to_agent("code", payload)
 
@@ -254,7 +261,7 @@ class OrchestratorAgent:
         except Exception as e:
             logger.error(f"Error sending prompt to Code Agent: {e}", exc_info=True)
             return {"error": f"Failed to communicate with Code Agent: {str(e)}"}
-
+    
     async def send_message_to_visual_agent(self, img_path: Path) -> dict[str, Any]:
         """Send an image to the Visual Agent and return the analysis result."""
         # Re-encode + downscale for latency and stability
@@ -300,6 +307,7 @@ class OrchestratorAgent:
         else:
             dump = self._dump_response_safe(response)
             raise RuntimeError(f"Invalid response from Visual Agent. Dump: {dump[:1500]}")
+
 
     @staticmethod
     async def test_process() -> None:

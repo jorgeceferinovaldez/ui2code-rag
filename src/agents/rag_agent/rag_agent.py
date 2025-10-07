@@ -80,6 +80,8 @@ class RAGAgent:
         """
         Load HTML/CSS examples using WebSightLoader from core layer.
         This loads data from WebSight dataset JSON files.
+        Load HTML/CSS examples using WebSightLoader from core layer.
+        This loads data from WebSight dataset JSON files.
         """
         documents = []
 
@@ -103,9 +105,12 @@ class RAGAgent:
             if not examples_dir.exists():
                 logger.error(f"Examples directory not found: {examples_dir}")
                 return []
+                logger.error(f"Examples directory not found: {examples_dir}")
+                return []
 
             # Load HTML files
             html_files = list(examples_dir.glob("**/*.html"))
+            logger.info(f"Found {len(html_files)} HTML files in ui_examples.")
             logger.info(f"Found {len(html_files)} HTML files in ui_examples.")
 
             for html_file in html_files:
@@ -127,6 +132,7 @@ class RAGAgent:
                     logger.error(f"Error loading {html_file}: {e}")
 
             print(f"Loaded {len(documents)} HTML examples from fallback")
+            print(f"Loaded {len(documents)} HTML examples from fallback")
             return documents
 
         except Exception as e:
@@ -143,6 +149,8 @@ class RAGAgent:
             top_k: Number of top patterns to retrieve
 
         Returns:
+            List of tuples (doc_id, chunk, metadata_enriched, score)
+            where metadata_enriched includes the full html_code
             List of tuples (doc_id, chunk, metadata_enriched, score)
             where metadata_enriched includes the full html_code
         """
@@ -197,6 +205,7 @@ class RAGAgent:
             return enriched_results
 
         except Exception as e:
+            logger.error(f"Error retrieving patterns: {e}", exc_info=True)
             logger.error(f"Error retrieving patterns: {e}", exc_info=True)
             print(f"Error retrieving patterns: {e}")
             return []
