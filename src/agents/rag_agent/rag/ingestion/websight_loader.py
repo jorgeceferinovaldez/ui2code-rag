@@ -26,7 +26,7 @@ class WebSightLoader:
         logger.info(f"WebSight data dir: {self.websight_dir}")
         logger.info(f"UI examples dir: {self.examples_dir}")
 
-    def load_websight_subset(self, max_examples: int = 1000) -> List[Dict[str, Any]]:
+    def load_websight_subset(self, max_examples: int = 1000) -> list[dict[str, Any]]:
         logger.info(f"Loading WebSight subset (max {max_examples})...")
         try:
             # Load from actual JSON files instead of cache/samples
@@ -379,7 +379,7 @@ class WebSightLoader:
 
         return sample_templates
 
-    def _get_sample_html_templates(self) -> List[str]:
+    def _get_sample_html_templates(self) -> list[str]:
         logger.info("Getting sample HTML templates from files...")
         html_samples = []
         # Recorrer los archivos JSON con el prefijo en el directorio websight_dir
@@ -411,7 +411,7 @@ class WebSightLoader:
         logger.info(f"Total HTML samples found: {len(html_samples)}")
         return html_samples
 
-    def _create_sample_websight_data(self, num_samples: int) -> List[Dict[str, Any]]:
+    def _create_sample_websight_data(self, num_samples: int) -> list[dict[str, Any]]:
         logger.info(f"Creating {num_samples} sample WebSight data entries...")
         sample_templates = self._get_sample_html_templates()
 
@@ -455,7 +455,7 @@ class WebSightLoader:
             text = re.sub(r"\s+", " ", text)
             return text.strip()
 
-    def websight_to_documents(self, websight_data: List[Dict[str, Any]]) -> List[Document]:
+    def websight_to_documents(self, websight_data: list[dict[str, Any]]) -> list[Document]:
         logger.info(f"Converting {len(websight_data)} WebSight entries to Document objects...")
         documents = []
         for entry in websight_data:
@@ -480,7 +480,7 @@ class WebSightLoader:
         logger.info(f"Converted {len(documents)} documents.")
         return documents
 
-    def _create_search_text(self, entry: Dict[str, Any]) -> str:
+    def _create_search_text(self, entry: dict[str, Any]) -> str:
         """Create searchable text from WebSight entry"""
         parts = []
 
@@ -509,7 +509,7 @@ class WebSightLoader:
 
         return " | ".join(parts)
 
-    def _extract_html_keywords(self, html: str) -> List[str]:
+    def _extract_html_keywords(self, html: str) -> list[str]:
         """Extract important HTML elements and classes for search"""
         import re
 
@@ -536,7 +536,7 @@ class WebSightLoader:
 
         return list(keywords)
 
-    def save_html_examples(self, documents: List[Document]) -> int:
+    def save_html_examples(self, documents: list[Document]) -> int:
         logger.info(f"Saving {len(documents)} HTML examples to {self.examples_dir}...")
         saved_count = 0
         for doc in documents:
@@ -576,7 +576,7 @@ class WebSightLoader:
         logger.info(f"Saved {saved_count} HTML examples.")
         return saved_count
 
-    def load_full_websight_pipeline(self, max_examples: int = 1000) -> List[Document]:
+    def load_full_websight_pipeline(self, max_examples: int = 1000) -> list[Document]:
         logger.info(f"Starting full WebSight pipeline (max {max_examples})...")
         try:
             websight_data = self.load_websight_subset(max_examples)
@@ -593,7 +593,7 @@ class WebSightLoader:
             return []
 
 
-def load_websight_documents(max_examples: int = 1000) -> List[Document]:
+def load_websight_documents(max_examples: int = 1000) -> list[Document]:
     """
     Convenience function to load WebSight documents
 
@@ -601,7 +601,7 @@ def load_websight_documents(max_examples: int = 1000) -> List[Document]:
         max_examples: Maximum number of examples to load
 
     Returns:
-        List of Document objects
+        list of Document objects
     """
     loader = WebSightLoader()
     return loader.load_full_websight_pipeline(max_examples)
