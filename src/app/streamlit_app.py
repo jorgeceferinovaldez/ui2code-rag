@@ -21,13 +21,6 @@ from src.config import (
 from src.agents.rag_agent.rag_agent import RAGAgent
 from src.agents.orchestator_agent.orchestator_agent import OrchestratorAgent
 
-st.write(
-    """
-# My first app
-Hello *world!*
-"""
-)
-
 nest_asyncio.apply()
 
 

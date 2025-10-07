@@ -51,8 +51,8 @@ files:
 
 # Agent service URLs
 agents_endpoints:
-  visual_agent_url: "http://localhost:10000"
-  code_agent_url: "http://localhost:10001"
+  visual_agent_url: "http://visual-agent:10000"
+  code_agent_url: "http://code-agent:10001"
 
 pinecone:
   index: "rag-index"

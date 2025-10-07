@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     temperature: float = 0.1
 
     # Server
-    host: str = "localhost"
+    host: str = "code-agent"
     port: int = 10001
 
     server_timeout_keep_alive: int = 600  # seconds

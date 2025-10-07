@@ -27,6 +27,22 @@ services:
     networks:
       - agents-net
 
+  streamlit-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: streamlit-app
+    env_file:
+      - .env
+    ports:
+      - "8501:8501"
+    restart: unless-stopped
+    networks:
+      - agents-net
+    depends_on:
+      - code-agent
+      - visual-agent
+
 networks:
   agents-net:
     driver: bridge

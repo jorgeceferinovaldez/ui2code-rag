@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     openai_key: Optional[str] = None
     openai_model: Optional[str] = None
 
-    host: str = "localhost"
+    host: str = "visual-agent"
     port: int = 10000
     server_timeout_keep_alive: int = 600  # seconds
 
