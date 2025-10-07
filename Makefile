@@ -6,7 +6,7 @@ PROJECT_NAME = ui-to-code-system
 ifeq ($(OS),Windows_NT)
     PYTHON_INTERPRETER = py
 else
-    PYTHON_INTERPRETER = /opt/anaconda3/envs/uicode312/bin/python
+    PYTHON_INTERPRETER = python
 endif
 VENV_NAME = venv
 PORT = 8501

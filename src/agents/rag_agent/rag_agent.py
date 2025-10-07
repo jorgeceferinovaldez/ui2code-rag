@@ -67,36 +67,46 @@ class RAGAgent:
 
     def _load_html_examples(self) -> list[Document]:
         """
-        Load HTML/CSS examples from the ui_examples directory
-        This will be expanded to load from WebSight dataset
+        Load HTML/CSS examples using WebSightLoader from core layer.
+        This loads data from WebSight dataset JSON files.
         """
         documents = []
 
         try:
-            logger.info("Loading HTML examples from ui_examples directory...")
+            logger.info("Loading HTML/CSS examples using WebSightLoader...")
+
+            # Use core layer WebSightLoader to load from data/websight/*.json
+            from src.rag.ingestion.websight_loader import load_websight_documents
+
+            documents = load_websight_documents(max_examples=1000)
+
+            if documents:
+                logger.info(f"Successfully loaded {len(documents)} WebSight documents")
+                print(f"Loaded {len(documents)} HTML/CSS examples from WebSight dataset")
+                return documents
+
+            # Fallback: try loading from ui_examples directory if WebSight fails
+            logger.warning("No WebSight documents loaded, trying fallback to ui_examples...")
             examples_dir = ui_examples_dir()
 
-            logger.info(f"Examples directory: {examples_dir}")
-
-            # Check if examples directory exists
             if not examples_dir.exists():
-                raise FileNotFoundError(f"Examples directory not found: {examples_dir}")
+                logger.error(f"Examples directory not found: {examples_dir}")
+                return []
 
             # Load HTML files
             html_files = list(examples_dir.glob("**/*.html"))
-
-            logger.info(f"Found {len(html_files)} HTML files.")
+            logger.info(f"Found {len(html_files)} HTML files in ui_examples.")
 
             for html_file in html_files:
                 try:
-                    logger.info(f"Loading HTML file: {html_file}")
-                    
                     with open(html_file, "r", encoding="utf-8") as f:
                         content = f.read()
 
-                    # Create document (no metadata parameter in Document class)
+                    # Create document
                     doc = Document(
-                        id=html_file.stem, text=content, source=str(html_file)  # Use filename without extension as ID
+                        id=html_file.stem,
+                        text=content,
+                        source=str(html_file)
                     )
 
                     # Add additional attributes
@@ -107,11 +117,9 @@ class RAGAgent:
                     documents.append(doc)
 
                 except Exception as e:
-                    print(f"Error loading {html_file}: {e}")
                     logger.error(f"Error loading {html_file}: {e}")
 
-
-            print(f"Loaded {len(documents)} HTML examples")
+            print(f"Loaded {len(documents)} HTML examples from fallback")
             return documents
 
         except Exception as e:
@@ -128,7 +136,8 @@ class RAGAgent:
             top_k: Number of top patterns to retrieve
 
         Returns:
-            List of tuples (doc_id, chunk, metadata, score)
+            List of tuples (doc_id, chunk, metadata_enriched, score)
+            where metadata_enriched includes the full html_code
         """
         if not self.rag_pipeline:
             return []
@@ -152,9 +161,34 @@ class RAGAgent:
                 top_final=top_k,  # Return top_k final results
             )
 
-            return results
+            # Enrich results with full html_code from original documents
+            enriched_results = []
+            for (doc_id, chunk, metadata, score) in results:
+                # Get the original document to access html_code
+                doc = self.rag_pipeline.docs.get(doc_id)
+
+                # Create enriched metadata with full HTML code
+                metadata_enriched = dict(metadata) if isinstance(metadata, dict) else {}
+
+                if doc and hasattr(doc, 'html_code'):
+                    metadata_enriched['html_code'] = doc.html_code
+                    metadata_enriched['doc_type'] = getattr(doc, 'doc_type', 'unknown')
+                    metadata_enriched['description'] = getattr(doc, 'description', 'No description')
+                    metadata_enriched['components'] = getattr(doc, 'components', [])
+                    metadata_enriched['filename'] = getattr(doc, 'filename', doc_id)
+                    logger.debug(f"Enriched pattern {doc_id} with html_code ({len(metadata_enriched['html_code'])} chars)")
+                else:
+                    # Fallback: use chunk as html_code if document not found
+                    metadata_enriched['html_code'] = chunk
+                    logger.warning(f"Could not find document {doc_id}, using chunk as html_code")
+
+                enriched_results.append((doc_id, chunk, metadata_enriched, score))
+
+            logger.info(f"Retrieved and enriched {len(enriched_results)} patterns for code generation")
+            return enriched_results
 
         except Exception as e:
+            logger.error(f"Error retrieving patterns: {e}", exc_info=True)
             print(f"Error retrieving patterns: {e}")
             return []
 

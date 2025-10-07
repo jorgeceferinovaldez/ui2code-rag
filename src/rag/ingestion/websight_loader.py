@@ -37,19 +37,35 @@ class WebSightLoader:
     def load_websight_subset(self, max_examples: int = 1000) -> List[Dict[str, Any]]:
         logger.info(f"Loading WebSight subset (max {max_examples})...")
         try:
-            cache_file = self.websight_dir / "websight_cache.json"
-            if cache_file.exists():
-                logger.info("Loading WebSight data from cache...")
-                with open(cache_file, 'r', encoding='utf-8') as f:
-                    cached_data = json.load(f)
-                logger.info(f"Loaded {len(cached_data)} cached examples.")
-                return cached_data[:max_examples]
-            logger.info("Creating sample WebSight-style data...")
-            sample_data = self._create_sample_websight_data(max_examples)
-            with open(cache_file, 'w', encoding='utf-8') as f:
-                json.dump(sample_data, f, indent=2)
-            logger.info(f"Sample data created and cached ({len(sample_data)} examples).")
-            return sample_data
+            # Load from actual JSON files instead of cache/samples
+            logger.info("Loading WebSight data from JSON files...")
+            html_templates = self._get_sample_html_templates()
+
+            if not html_templates:
+                logger.warning("No HTML templates found in JSON files, using fallback samples")
+                sample_data = self._create_sample_websight_data(min(max_examples, 20))
+                return sample_data
+
+            logger.info(f"Loaded {len(html_templates)} HTML templates from JSON files")
+
+            # Convert to WebSight format (must match expected structure in websight_to_documents)
+            websight_data = []
+            for i, template in enumerate(html_templates[:max_examples]):
+                websight_data.append({
+                    "id": f"websight_{i:06d}",
+                    "html": template.get("html", ""),
+                    "url": f"websight://sample/{i}",
+                    "metadata": {
+                        "type": template.get("type", "unknown"),
+                        "description": template.get("description", "No description"),
+                        "components": template.get("components", []),
+                        "created_at": "2025-01-01"
+                    }
+                })
+
+            logger.info(f"Prepared {len(websight_data)} WebSight documents")
+            return websight_data
+
         except Exception as e:
             logger.error(f"Error loading WebSight data: {e}", exc_info=True)
             return []
