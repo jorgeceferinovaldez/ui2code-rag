@@ -476,6 +476,9 @@ def main():
     rag_agent = initialize_rag_agent()
     # Inicializar el RAG sobre el corpus (si existe, sino existe, no pasa nada)
 
+    # Initialize RAG pipeline heredado para evitar errores en status
+    pipeline = get_rag_pipeline()
+
     if rag_agent:
         rag_status = rag_agent.get_rag_status()
         if rag_status.get("status") == "ready":
