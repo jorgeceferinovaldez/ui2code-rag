@@ -1,10 +1,18 @@
-import json, argparse
+import json, requests, os
+from pathlib import Path
 from typing import Any
 from datetime import datetime
 from loguru import logger
 
 # Local dependencies
-from src.config import websight_data_dir, ui_examples_dir, websight_data_file_name
+from src.config import (
+    websight_data_dir,
+    ui_examples_dir,
+    websight_data_file_name,
+    websight_download_steps,
+    websight_download_offset,
+    websight_download_length,
+)
 from ..core.documents import Document
 
 
@@ -592,28 +600,36 @@ class WebSightLoader:
             logger.error(f"Error in WebSight pipeline: {e}", exc_info=True)
             return []
 
+    def download_websight_data(
+        self,
+        output_dir: Path = websight_data_dir,
+        websight_steps: int = websight_download_steps,
+        websight_offset: int = websight_download_offset,
+        websight_length: int = websight_download_length,
+    ):
+        """
+        Descarga el dataset WebSight en múltiples pasos usando la API de HuggingFace Datasets-Server.
 
-def load_websight_documents(max_examples: int = 1000) -> list[Document]:
-    """
-    Convenience function to load WebSight documents
-
-    Args:
-        max_examples: Maximum number of examples to load
-
-    Returns:
-        list of Document objects
-    """
-    loader = WebSightLoader()
-    return loader.load_full_websight_pipeline(max_examples)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Load WebSight documents")
-    parser.add_argument("--max-examples", type=int, default=1000, help="Maximum number of examples to load")
-    args = parser.parse_args()
-
-    logger.info(f"Running as __main__ with max_examples={args.max_examples}")
-    docs = load_websight_documents(max_examples=args.max_examples)
-    logger.info(f"Loaded {len(docs)} WebSight documents.")
-
-    print(f"Loaded {len(docs)} WebSight documents.")
+        Args:
+            output_dir (str): Directorio donde se guardarán los archivos JSON.
+            websight_steps (int): Cantidad de filas a descargar por request.
+            websight_offset (int): Offset inicial.
+            websight_length (int): Límite superior del rango de offsets a descargar.
+        """
+        output_dir.mkdir(parents=True, exist_ok=True)
+        for step in range(websight_offset, websight_length + 1, websight_steps):
+            logger.debug(f"Descargando offset {step}...")
+            url = (
+                f"https://datasets-server.huggingface.co/rows?"
+                f"dataset=HuggingFaceM4%2FWebSight&config=v0.2&split=train"
+                f"&offset={step}&length={websight_steps}"
+            )
+            output_file = output_dir / f"websight_{step}.json"
+            try:
+                response = requests.get(url, timeout=60)
+                response.raise_for_status()
+                with open(output_file, "w", encoding="utf-8") as f:
+                    f.write(response.text)
+                logger.debug(f"Guardado en {output_file}")
+            except requests.RequestException as e:
+                logger.error(f"Error descargando offset {step}: {e}")

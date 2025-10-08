@@ -154,6 +154,12 @@ st_model_name = config["sentence_transformers"]["model_name"]
 server_timeout_keep_alive = config["server_timeout_keep_alive"]
 server_connect_timeout = config["server_connect_timeout"]
 
+# WebSight dataset configuration
+websight_max_examples = config["websight_dataset"]["max_examples"]
+websight_download_steps = config["websight_dataset"]["download_steps"]
+websight_download_offset = config["websight_dataset"]["download_offset"]
+websight_download_length = config["websight_dataset"]["download_length"]
+
 # Env variables
 try:
     pinecone_api_key = os.environ.get("PINECONE_API_KEY", "")
