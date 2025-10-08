@@ -58,7 +58,7 @@ run-code-agent:
 ## Run Streamlit web app
 run-server:
 	@echo "Starting UI-to-Code Streamlit app on port $(PORT)..."
-	$(PYTHON_INTERPRETER) -m streamlit run src/app/streamlit_app.py --server.port $(PORT) --server.address 0.0.0.0
+	$(PYTHON_INTERPRETER) -m streamlit run src/app/main.py --server.port $(PORT) --server.address 0.0.0.0
 
 ## Build Pinecone vector index from HTML/CSS examples
 build-html:

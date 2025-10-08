@@ -293,7 +293,7 @@ Iniciar la aplicación web Streamlit:
 python run_streamlit.py
 
 # O directamente con streamlit
-streamlit run app/streamlit_app.py
+streamlit run app/main.py
 ```
 
 La interfaz web proporciona cuatro páginas principales:
