@@ -61,7 +61,7 @@ check_visual_agent_env() {
     if [ -f "$VISUAL_AGENT_ENV" ]; then
         echo "   Archivo $VISUAL_AGENT_ENV encontrado."
     
-        # Check if OPENROUTER_API_KEY, GUARDRAILS_API_KEY, and OPENROUTER_VISUAL_MODEL are set
+
         if ! grep -q '^OPENROUTER_API_KEY=' "$VISUAL_AGENT_ENV"; then
             echo "❌ OPENROUTER_API_KEY no está configurada en $VISUAL_AGENT_ENV."
             echo "Por favor, edita el archivo y añade tu clave API de OpenRouter (https://openrouter.ai/settings/keys)."
@@ -100,7 +100,6 @@ check_code_agent_env() {
     if [ -f "$CODE_AGENT_ENV" ]; then
         echo "   Archivo $CODE_AGENT_ENV encontrado."
 
-        # Check if OPENROUTER_API_KEY, PINECONE_API_KEY, and OPENROUTER_CODE_MODEL are set
         if ! grep -q '^OPENROUTER_API_KEY=' "$CODE_AGENT_ENV"; then
             echo "❌ OPENROUTER_API_KEY no está configurada en $CODE_AGENT_ENV."
             echo "Por favor, edita el archivo y añade tu clave API de OpenRouter (https://openrouter.ai/settings/keys)."
@@ -119,15 +118,15 @@ check_code_agent_env() {
     else
         echo "   No se encontró el archivo $CODE_AGENT_ENV."
         echo "   Creando..."
-        # Solicitar claves al usuario
+
         read -p "   Introduce tu OPENROUTER_API_KEY (https://openrouter.ai/settings/keys): " OPENROUTER_API_KEY
-        read -p "   Introduce tu PINECONE_API_KEY (https://app.pinecone.io/): " PINECONE_API_KEY
+        read -p "   Introduce tu GUARDRAILS_API_KEY (https://hub.guardrailsai.com/keys): " GUARDRAILS_API_KEY
         read -p "   Introduce tu OPENROUTER_CODE_MODEL (ejemplo: deepseek/deepseek-chat-v3.1:free). Puedes ver los modelos disponibles en https://openrouter.ai/models?fmt=cards&input_modalities=text&max_price=0: " OPENROUTER_CODE_MODEL
 
         # Crear el archivo .env con las variables necesarias
         cat <<EOF > "$CODE_AGENT_ENV"
 OPENROUTER_API_KEY=$OPENROUTER_API_KEY
-PINECONE_API_KEY=$PINECONE_API_KEY
+GUARDRAILS_API_KEY=$GUARDRAILS_API_KEY
 OPENROUTER_CODE_MODEL=$OPENROUTER_CODE_MODEL
 EOF
     fi
@@ -139,7 +138,6 @@ check_streamlit_env() {
     if [ -f "$STREAMLIT_ENV" ]; then
         echo "   Archivo $STREAMLIT_ENV encontrado."
 
-        # Check if PINECONE_API_KEY is set
         if ! grep -q '^PINECONE_API_KEY=' "$STREAMLIT_ENV"; then
             echo "❌ PINECONE_API_KEY no está configurada en $STREAMLIT_ENV. (en el root del proyecto)"
             echo "Por favor, edita el archivo y añade tu clave API de Pinecone (https://app.pinecone.io/)."
@@ -148,8 +146,9 @@ check_streamlit_env() {
     else
         echo "   No se encontró el archivo $STREAMLIT_ENV."
         echo "   Creando..."
-        # Solicitar claves al usuario
+
         read -p "   Introduce tu PINECONE_API_KEY (https://app.pinecone.io/): " PINECONE_API_KEY
+
         # Crear el archivo .env con las variables necesarias
         cat <<EOF > "$STREAMLIT_ENV"
 PINECONE_API_KEY=$PINECONE_API_KEY
