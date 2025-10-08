@@ -14,7 +14,7 @@ rag:
 
 # Application paths
 app:
-  main_file: "src/app/streamlit_app.py"
+  main_file: "src/app/main.py"
   streamlit_port: 8501
 
 # Source code structure

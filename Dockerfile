@@ -39,4 +39,4 @@ ENTRYPOINT []
 # App
 EXPOSE ${PORT}
 HEALTHCHECK CMD curl --fail http://localhost:${PORT}/_stcore/health || exit 1
-CMD ["streamlit", "run", "src/app/streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["streamlit", "run", "src/app/main.py", "--server.port=8501", "--server.address=0.0.0.0"]
