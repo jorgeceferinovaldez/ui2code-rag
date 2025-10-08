@@ -21,7 +21,7 @@ WEBSIGHT_OFFSET = 0
 WEBSIGHT_LENGTH = 1000
 WEBSIGHT_STEPS=100
 
-WEBSIGHT_LOADER_PATH = src/agents/rag_agent/rag/ingestion/websight_loader.py
+WEBSIGHT_LOADER_MODULE = src.agents.rag_agent.rag.ingestion.websight_loader
 WEBSIGHT_MAX_EXAMPLES = 1000
 
 ## Download a subset of the WebSight dataset for testing
@@ -63,7 +63,7 @@ run-server:
 ## Build Pinecone vector index from HTML/CSS examples
 build-html:
 	@echo "Building Pinecone vector index for HTML/CSS examples..."
-	$(PYTHON_INTERPRETER) $(WEBSIGHT_LOADER_PATH) --max-examples=$(WEBSIGHT_MAX_EXAMPLES)
+	$(PYTHON_INTERPRETER) -m $(WEBSIGHT_LOADER_MODULE) --max-examples=$(WEBSIGHT_MAX_EXAMPLES)
 
 evaluate-retrieval:
 	$(PYTHON_INTERPRETER) -m src.rag.evaluators.evaluate_retrieval --docs data/evaluate/docs_ui_code_en.jsonl --qrels data/evaluate/qrels_ui_code_en.csv --ks 3,5 --top_retrieve 10 --top_final 5
