@@ -69,3 +69,9 @@ sentence_transformers:
 
 server_timeout_keep_alive: 600  # seconds
 server_connect_timeout: 30  # seconds
+
+websight_dataset:
+  max_examples: 1000
+  download_steps: 100
+  download_offset: 0
+  download_length: 1000

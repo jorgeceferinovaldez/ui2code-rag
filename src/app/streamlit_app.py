@@ -25,6 +25,12 @@ from src.agents.orchestator_agent.orchestator_agent import OrchestratorAgent
 nest_asyncio.apply()
 
 
+def initialize_state():
+    """Initialize session state variables."""
+    if "download_websight" not in st.session_state:
+        st.session_state.download_websight = False
+
+
 @st.cache_resource
 def get_rag_pipeline():
     """
@@ -219,7 +225,7 @@ def get_system_status(pipeline=None):
 
 
 @st.cache_resource
-def initilize_orchestator_agent() -> OrchestratorAgent:
+def initialize_orchestrator_agent() -> OrchestratorAgent:
     """
     Initialize and cache the Orchestrator Agent.
     """
@@ -233,7 +239,7 @@ def initilize_orchestator_agent() -> OrchestratorAgent:
 
 
 @st.cache_resource
-def initilize_rag_agent():
+def initialize_rag_agent():
     """
     Initialize and cache the RAG Agent.
     """
@@ -251,12 +257,12 @@ def ui_to_code_page():
     st.markdown("Upload a UI design image and convert it to clean HTML/Tailwind CSS code.")
 
     # Initialize agents
-    orchestrator_agent = initilize_orchestator_agent()
+    orchestrator_agent = initialize_orchestrator_agent()
     if not orchestrator_agent:
         st.error("Orchestrator agent is not available. Please check your configuration.")
         return
 
-    rag_agent = initilize_rag_agent()
+    rag_agent = initialize_rag_agent()
     if not rag_agent:
         st.error("RAG agent is not available. Please check your configuration.")
         return
@@ -428,11 +434,34 @@ def ui_to_code_page():
             st.error("RAG agent not available")
 
 
-# ------------------------------- MAIN APP ------------------------------- #
+def handle_download_websight_click():
+    """Handle the download of the sample WebSight dataset."""
+    rag_agent = initialize_rag_agent()
+    if not rag_agent:
+        st.error("RAG agent is not available. Please check your configuration.")
+        return
+
+    with st.spinner("Downloading and initializing WebSight dataset..."):
+        logger.debug("Starting WebSight dataset download and RAG initialization...")
+        success = rag_agent.initialize_websight_rag_pipeline()
+        if success:
+            st.success("✅ WebSight dataset downloaded and RAG pipeline initialized.")
+            st.session_state.download_websight = True
+        else:
+            st.error("❌ Failed to download or initialize WebSight dataset. Check logs for details.")
+
+
+def print_rag_summary_status(rag_status):
+    total_docs = rag_status.get("total_documents", 0)
+    total_chunks = rag_status.get("total_chunks", 0)
+    st.success(
+        f"✅ HTML/CSS Pattern Corpus: {total_docs} documents ({total_chunks} code patterns) ready from WebSight dataset"
+    )
 
 
 def main():
     """Main Streamlit application."""
+    initialize_state()
     st.set_page_config(
         page_title="Multi-Agent UI-to-Code System",
         page_icon="🎨",
@@ -444,20 +473,37 @@ def main():
     st.markdown("Convert UI designs to clean HTML/Tailwind CSS code using AI vision, RAG, and prompt-to-HTML.")
 
     # Show corpus status
-    rag_agent_test = initilize_rag_agent()
-    if rag_agent_test:
-        rag_status = rag_agent_test.get_rag_status()
-        if rag_status.get('status') == 'ready':
-            total_docs = rag_status.get('total_documents', 0)
-            total_chunks = rag_status.get('total_chunks', 0)
-            st.success(f"✅ HTML/CSS Pattern Corpus: {total_docs} documents ({total_chunks} code patterns) ready from WebSight dataset")
+    rag_agent = initialize_rag_agent()
+    # Inicializar el RAG sobre el corpus (si existe, sino existe, no pasa nada)
+
+    if rag_agent:
+        rag_status = rag_agent.get_rag_status()
+        if rag_status.get("status") == "ready":
+            st.session_state.download_websight = True
+            print_rag_summary_status(rag_status)
         else:
-            st.warning("⚠️ HTML/CSS pattern corpus not fully initialized. Some features may be limited.")
+            corpus_rag_result = rag_agent.initialize_corpus_rag_pipeline()
+            if corpus_rag_result:
+                st.session_state.download_websight = True
+                rag_status = rag_agent.get_rag_status()
+                print_rag_summary_status(rag_status)
+            else:
+                st.session_state.download_websight = False
+                st.warning(
+                    "⚠️ HTML/CSS pattern corpus not fully initialized.\n- You can deposit your company's template HTML files in the corpus directory to enhance pattern-based code generation.\n- You can also test our online dataset of UI examples from WebSight, by clicking the option."
+                )
     else:
         st.warning("⚠️ RAG Agent not available. Pattern-based code generation may be limited.")
 
-    # Initialize RAG pipeline (only needed for PDF RAG search - optional)
-    pipeline = get_rag_pipeline()
+    # Download sample dataset button
+    left, middle, right = st.columns(3)
+    right.button(
+        label="Download Sample HTML/CSS Dataset",
+        type="secondary",
+        help="Download a sample dataset of HTML/CSS examples from WebSight to populate the corpus.",
+        disabled=st.session_state.download_websight,
+        on_click=handle_download_websight_click,
+    )
 
     # Sidebar navigation
     st.sidebar.title("Navigation")
@@ -490,7 +536,7 @@ def main():
             st.markdown("### Settings")
             if mode == "RAG Search (HTML Patterns)":
                 top_k = st.slider("Top results to show", 1, 10, 5)
-                prompt_custom_instructions = ""   # keep var defined for later reference
+                prompt_custom_instructions = ""  # keep var defined for later reference
                 save_results_prompt = False
             else:
                 # Prompt → HTML options
@@ -502,23 +548,23 @@ def main():
                 save_results_prompt = st.checkbox("Save generated code", value=True)
 
         btn_label = "🚀 Search HTML Patterns" if mode == "RAG Search (HTML Patterns)" else "🚀 Generate from Prompt"
-        btn_disabled = (not query or not query.strip())
+        btn_disabled = not query or not query.strip()
 
         if st.button(btn_label, disabled=btn_disabled):
             # --- RAG SEARCH MODE (HTML PATTERNS) --- #
             if mode == "RAG Search (HTML Patterns)":
                 # Initialize RAG agent for HTML patterns
-                rag_agent = initilize_rag_agent()
+                rag_agent = initialize_rag_agent()
                 if not rag_agent:
                     st.error("RAG agent is not available. Please check your configuration.")
                 else:
                     with st.spinner("Searching HTML/CSS patterns..."):
                         # Create a simple visual analysis from the query
                         visual_analysis = {
-                            'analysis_text': query.strip(),
-                            'components': [],
-                            'layout': 'unknown',
-                            'style': 'modern'
+                            "analysis_text": query.strip(),
+                            "components": [],
+                            "layout": "unknown",
+                            "style": "modern",
                         }
 
                         # Use RAG agent to search patterns
@@ -536,10 +582,12 @@ def main():
                                 st.markdown(f"**Description:** {metadata.get('description', 'No description')}")
 
                                 # Show HTML code if available
-                                html_code = metadata.get('html_code', chunk)
+                                html_code = metadata.get("html_code", chunk)
                                 if html_code:
                                     st.markdown("**HTML Code:**")
-                                    st.code(html_code[:1500] + ("..." if len(html_code) > 1500 else ""), language="html")
+                                    st.code(
+                                        html_code[:1500] + ("..." if len(html_code) > 1500 else ""), language="html"
+                                    )
                                 else:
                                     st.markdown("**Content:**")
                                     st.text(chunk)
@@ -547,15 +595,15 @@ def main():
                                 if metadata:
                                     with st.expander("📋 Full Metadata"):
                                         # Don't show html_code in JSON (too long)
-                                        meta_display = {k: v for k, v in metadata.items() if k != 'html_code'}
-                                        meta_display['html_code_length'] = len(html_code) if html_code else 0
+                                        meta_display = {k: v for k, v in metadata.items() if k != "html_code"}
+                                        meta_display["html_code_length"] = len(html_code) if html_code else 0
                                         st.json(meta_display)
                     else:
                         st.warning("No patterns found. Try a different query.")
 
             # --- PROMPT → HTML MODE --- #
             else:
-                orchestrator_agent = initilize_orchestator_agent()
+                orchestrator_agent = initialize_orchestrator_agent()
                 if not orchestrator_agent:
                     st.error("Orchestrator agent is not available. Please check your configuration.")
                 else:
@@ -603,13 +651,12 @@ def main():
             st.rerun()
 
         # Get RAG Agent status (HTML/CSS patterns - the actual corpus)
-        rag_agent = initilize_rag_agent()
+        rag_agent = initialize_rag_agent()
         if rag_agent:
             rag_status = rag_agent.get_rag_status()
 
             # Determine overall system status
-            is_healthy = (rag_status.get('status') == 'ready' and
-                         rag_status.get('total_documents', 0) > 0)
+            is_healthy = rag_status.get("status") == "ready" and rag_status.get("total_documents", 0) > 0
             status_color = "🟢" if is_healthy else "🟡"
             status_text = "HEALTHY" if is_healthy else "WARNING"
 
@@ -619,18 +666,18 @@ def main():
             st.markdown("### 📚 HTML/CSS Pattern Corpus Status")
             c1, c2, c3, c4 = st.columns(4)
             with c1:
-                st.metric("HTML Documents", rag_status.get('total_documents', 0))
+                st.metric("HTML Documents", rag_status.get("total_documents", 0))
             with c2:
-                st.metric("Code Patterns", rag_status.get('total_chunks', 0))
+                st.metric("Code Patterns", rag_status.get("total_chunks", 0))
             with c3:
-                vector_status = "🟢 Ready" if rag_status.get('vector_search_available') else "🔴 Not Ready"
+                vector_status = "🟢 Ready" if rag_status.get("vector_search_available") else "🔴 Not Ready"
                 st.metric("Vector Search", vector_status)
             with c4:
-                bm25_status = "🟢 Ready" if rag_status.get('bm25_search_available') else "🔴 Not Ready"
+                bm25_status = "🟢 Ready" if rag_status.get("bm25_search_available") else "🔴 Not Ready"
                 st.metric("BM25 Search", bm25_status)
 
             # Corpus location
-            examples_dir = rag_status.get('examples_directory', 'Unknown')
+            examples_dir = rag_status.get("examples_directory", "Unknown")
             st.code(f"Corpus Path: {examples_dir}", language="bash")
 
             # Index Details
@@ -640,7 +687,7 @@ def main():
 
             with col1:
                 st.markdown("**BM25 Index (Keyword Search)**")
-                if rag_status.get('bm25_search_available'):
+                if rag_status.get("bm25_search_available"):
                     st.success("✅ Active - Fast keyword-based retrieval")
                     st.info(f"📊 Indexed: {rag_status.get('total_chunks', 0)} code patterns")
                 else:
@@ -648,9 +695,10 @@ def main():
 
             with col2:
                 st.markdown("**Vector Index (Semantic Search)**")
-                if rag_status.get('vector_search_available'):
+                if rag_status.get("vector_search_available"):
                     st.success("✅ Active - Pinecone semantic search")
                     import os
+
                     pinecone_index = os.getenv("PINECONE_INDEX", "rag-index")
                     st.info(f"📦 Index: `{pinecone_index}`")
                     st.info(f"🏷️ Namespace: `html-css-examples`")
@@ -669,6 +717,7 @@ def main():
                     # Check if visual agent is accessible via A2A agent-card endpoint
                     import httpx
                     from src.config import visual_agent_url
+
                     try:
                         response = httpx.get(f"{visual_agent_url}/.well-known/agent-card.json", timeout=2.0)
                         if response.status_code == 200:
@@ -686,6 +735,7 @@ def main():
                 st.markdown("**Code Agent**")
                 try:
                     from src.config import code_agent_url
+
                     try:
                         response = httpx.get(f"{code_agent_url}/.well-known/agent-card.json", timeout=2.0)
                         if response.status_code == 200:
@@ -701,7 +751,7 @@ def main():
 
             with col3:
                 st.markdown("**RAG Agent**")
-                if rag_agent and rag_status.get('status') == 'ready':
+                if rag_agent and rag_status.get("status") == "ready":
                     st.success("✅ Ready")
                     st.info(f"📚 {rag_status.get('total_documents', 0)} docs loaded")
                 else:
@@ -714,8 +764,8 @@ def main():
                 "websight_data_dir": str(project_dir() / "data" / "websight"),
                 "html_patterns_dir": examples_dir,
                 "rag_agent_initialized": rag_agent is not None,
-                "total_html_patterns": rag_status.get('total_documents', 0),
-                "pinecone_configured": rag_status.get('vector_search_available', False),
+                "total_html_patterns": rag_status.get("total_documents", 0),
+                "pinecone_configured": rag_status.get("vector_search_available", False),
             }
             st.json(config_info)
 
@@ -745,28 +795,29 @@ def main():
             st.rerun()
 
         # Get RAG Agent status (HTML patterns)
-        rag_agent = initilize_rag_agent()
+        rag_agent = initialize_rag_agent()
         if rag_agent:
             rag_status = rag_agent.get_rag_status()
 
-            if rag_status.get('status') == 'ready':
+            if rag_status.get("status") == "ready":
                 st.markdown("### 📊 Corpus Summary")
                 c1, c2, c3, c4 = st.columns(4)
                 with c1:
-                    st.metric("HTML Documents", rag_status.get('total_documents', 0))
+                    st.metric("HTML Documents", rag_status.get("total_documents", 0))
                 with c2:
-                    st.metric("Code Patterns", rag_status.get('total_chunks', 0))
+                    st.metric("Code Patterns", rag_status.get("total_chunks", 0))
                 with c3:
-                    vector_available = "✅ Yes" if rag_status.get('vector_search_available') else "❌ No"
+                    vector_available = "✅ Yes" if rag_status.get("vector_search_available") else "❌ No"
                     st.metric("Vector Search (Pinecone)", vector_available)
                 with c4:
-                    bm25_available = "✅ Yes" if rag_status.get('bm25_search_available') else "❌ No"
+                    bm25_available = "✅ Yes" if rag_status.get("bm25_search_available") else "❌ No"
                     st.metric("BM25 Search", bm25_available)
 
                 # Show Pinecone details if available
-                if rag_status.get('vector_search_available'):
+                if rag_status.get("vector_search_available"):
                     st.markdown("### 🔗 Vector Search Details")
                     import os
+
                     pinecone_index = os.getenv("PINECONE_INDEX", "rag-index")
                     pinecone_namespace = "html-css-examples"
 
@@ -778,13 +829,16 @@ def main():
                         st.code(f"Vectors: {rag_status.get('total_chunks', 0)}", language="text")
                         st.code(f"Model: sentence-transformers/all-MiniLM-L6-v2", language="text")
 
-                    st.info("💡 Vector search uses Pinecone for fast semantic similarity search across all HTML patterns.")
+                    st.info(
+                        "💡 Vector search uses Pinecone for fast semantic similarity search across all HTML patterns."
+                    )
 
                 st.markdown("### 📁 Corpus Location")
-                st.code(rag_status.get('examples_directory', 'Unknown'), language="bash")
+                st.code(rag_status.get("examples_directory", "Unknown"), language="bash")
 
                 st.markdown("### 🔍 Pattern Types")
-                st.markdown("""
+                st.markdown(
+                    """
                 The corpus contains HTML/CSS examples from the WebSight dataset covering:
                 - **Landing pages** - Hero sections, CTAs, features
                 - **Dashboards** - Sidebars, stat cards, data tables
@@ -792,7 +846,8 @@ def main():
                 - **Forms** - Input fields, validation, layouts
                 - **Cards & Components** - Reusable UI patterns
                 - **Responsive layouts** - Mobile-first designs
-                """)
+                """
+                )
 
                 # Show WebSight data location
                 st.markdown("### 📦 Source Data")
@@ -802,14 +857,15 @@ def main():
                 # Count JSON files
                 try:
                     import json
+
                     json_files = list(websight_dir.glob("websight_*.json"))
                     total_rows = 0
                     valid_files = 0
                     for json_file in json_files:
                         try:
-                            with open(json_file, 'r') as f:
+                            with open(json_file, "r") as f:
                                 data = json.load(f)
-                                rows = len(data.get('rows', []))
+                                rows = len(data.get("rows", []))
                                 if rows > 0:
                                     total_rows += rows
                                     valid_files += 1
@@ -823,12 +879,14 @@ def main():
                     st.warning(f"Could not read WebSight directory: {e}")
 
                 st.markdown("### 🎯 Usage")
-                st.info("""
+                st.info(
+                    """
                 This corpus is automatically used when:
                 1. **UI to Code**: Upload an image → Visual analysis → RAG retrieves similar patterns → Code generated
                 2. **RAG Search**: Search for HTML patterns by description
                 3. **Prompt → HTML**: Describe UI → RAG finds similar examples → Code generated
-                """)
+                """
+                )
             else:
                 st.error("RAG system not ready. Please check system status.")
                 st.json(rag_status)

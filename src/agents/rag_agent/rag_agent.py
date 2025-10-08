@@ -1,12 +1,15 @@
 """RAG Agent for retrieving HTML/CSS examples based on visual analysis."""
 
 import os
+from pathlib import Path
 from typing import Any
 from loguru import logger
 
 # Local dependencies
 from .rag.core.documents import Document
 from .rag.core.rag_pipeline import RagPipeline
+from .rag.adapters.pinecone_adapter import PineconeSearcher
+from .rag.ingestion.websight_loader import WebSightLoader
 from src.config import (
     ui_examples_dir,
     pinecone_index,
@@ -16,86 +19,97 @@ from src.config import (
     pinecone_api_key,
     pinecone_rag_namespace,
     rag_ce_model,
+    corpus_dir,
+    websight_data_dir,
+    st_model_name,
 )
 
 
 class RAGAgent:
     def __init__(self):
         self.rag_pipeline = None
-        self._initialize_rag_pipeline()
 
-    def _initialize_rag_pipeline(self):
+    def initialize_corpus_rag_pipeline(self) -> bool:
+        """Inicializa el pipeline RAG con los documentos del corpus local."""
+        if not corpus_dir().exists():
+            logger.warning(f"Corpus directory not found: {corpus_dir()}")
+            return False
+        if not any(corpus_dir().iterdir()):
+            logger.warning(f"Corpus directory is empty: {corpus_dir()}")
+            return False
+
+        documents = []
+
+        self.rag_pipeline = self._initialize_rag_pipeline(documents)
+        raise NotImplementedError("Local corpus loading not implemented yet.")
+
+    def initialize_websight_rag_pipeline(self) -> bool:
+        """Inicializa el pipeline RAG con ejemplos de HTML/CSS del conjunto de datos WebSight."""
+        websight_data_dir().mkdir(parents=True, exist_ok=True)
+        if not any(websight_data_dir().iterdir()):
+            logger.info(f"WebSight data directory is empty: {websight_data_dir()}. Downloading dataset...")
+            try:
+                self._download_websight_dataset(websight_data_dir())
+            except Exception as e:
+                logger.error(f"Error downloading WebSight dataset: {e}")
+                return False
+        else:
+            logger.info(
+                f"WebSight data directory already exists: {websight_data_dir()}. Skipping download. Maybe outdated?"
+            )
+
+        documents: list[Document] = []
+        documents = self._load_websight_html_examples()
+        self.rag_pipeline = self._initialize_rag_pipeline(documents)
+        return self.rag_pipeline is not None
+
+    def _initialize_rag_pipeline(self, documents: list[Document]) -> RagPipeline:
         """Initialize RAG pipeline with HTML/CSS examples"""
-
-        logger.info("Initializing RAG pipeline with HTML/CSS examples...")
         try:
-            # Load HTML/CSS examples
-            logger.info("Loading HTML/CSS examples from ui_examples directory...")
-            html_examples = self._load_html_examples()
-
-            if not html_examples:
-                logger.warning("No HTML/CSS examples found. RAG pipeline will not be available.")
-                print("Warning: No HTML/CSS examples found. RAG pipeline will not be available.")
-                return
-
-            # Initialize Pinecone searcher if configured (optional)
             pinecone_searcher = None
             if pinecone_api_key:
                 try:
-                    logger.info("Initializing Pinecone searcher for RAG pipeline...")
-                    from .rag.adapters.pinecone_adapter import PineconeSearcher
-
+                    logger.debug("Initializing Pinecone searcher for RAG pipeline...")
                     pinecone_searcher = PineconeSearcher(
                         index_name=pinecone_index,
-                        model_name=pinecone_model_name,
+                        model_name=st_model_name,
                         cloud=pinecone_cloud,
                         region=pinecone_region,
                         api_key=pinecone_api_key,
                         namespace=pinecone_rag_namespace,
                     )
                 except Exception as e:
-                    print(f"Warning: Could not initialize Pinecone: {e}")
+                    logger.warning(f"Could not initialize Pinecone: {e}")
 
             # Initialize RAG pipeline
             logger.info("Creating RAG pipeline...")
-            self.rag_pipeline = RagPipeline(
-                docs=html_examples,
+            return RagPipeline(
+                docs=documents,
                 pinecone_searcher=pinecone_searcher,
                 max_tokens_chunk=400,  # Slightly larger chunks for HTML/CSS
                 overlap=100,
                 ce_model=rag_ce_model,
             )
-
-            print(f"RAG pipeline initialized with {len(html_examples)} HTML/CSS examples")
-
         except Exception as e:
             logger.error(f"Error initializing RAG pipeline: {e}")
-            print(f"Error initializing RAG pipeline: {e}")
-            self.rag_pipeline = None
+            return None
 
-    def InitializeRag(self):
-        self._initialize_rag_pipeline()
-
-    def _load_html_examples(self) -> list[Document]:
+    def _load_websight_html_examples(self) -> list[Document]:
         """
         Load HTML/CSS examples using WebSightLoader from core layer.
         This loads data from WebSight dataset JSON files.
         Load HTML/CSS examples using WebSightLoader from core layer.
         This loads data from WebSight dataset JSON files.
         """
+        websight_loader = WebSightLoader()
         documents = []
 
         try:
-            logger.info("Loading HTML/CSS examples using WebSightLoader...")
-
-            # Use core layer WebSightLoader to load from data/websight/*.json
-            from .rag.ingestion.websight_loader import load_websight_documents
-
-            documents = load_websight_documents(max_examples=1000)
+            logger.debug("Loading HTML/CSS examples using WebSightLoader...")
+            documents = websight_loader.load_full_websight_pipeline(max_examples=1000)
 
             if documents:
-                logger.info(f"Successfully loaded {len(documents)} WebSight documents")
-                print(f"Loaded {len(documents)} HTML/CSS examples from WebSight dataset")
+                logger.success(f"Successfully loaded {len(documents)} WebSight documents")
                 return documents
 
             # Fallback: try loading from ui_examples directory if WebSight fails
@@ -105,12 +119,9 @@ class RAGAgent:
             if not examples_dir.exists():
                 logger.error(f"Examples directory not found: {examples_dir}")
                 return []
-                logger.error(f"Examples directory not found: {examples_dir}")
-                return []
 
             # Load HTML files
             html_files = list(examples_dir.glob("**/*.html"))
-            logger.info(f"Found {len(html_files)} HTML files in ui_examples.")
             logger.info(f"Found {len(html_files)} HTML files in ui_examples.")
 
             for html_file in html_files:
@@ -132,13 +143,29 @@ class RAGAgent:
                     logger.error(f"Error loading {html_file}: {e}")
 
             print(f"Loaded {len(documents)} HTML examples from fallback")
-            print(f"Loaded {len(documents)} HTML examples from fallback")
             return documents
 
         except Exception as e:
             print(f"Error loading HTML examples: {e}")
             logger.error(f"Error loading HTML examples: {e}")
             return []
+
+    def _download_websight_dataset(self, output_dir: Path) -> bool:
+        """Descarga el conjunto de datos WebSight en el directorio especificado."""
+        websight_loader = WebSightLoader()
+        try:
+            websight_loader.download_websight_data(output_dir)
+            return True
+        except Exception as e:
+            logger.error(f"Error downloading WebSight dataset: {e}")
+            return False
+
+    def create_rag_index(self, folder_path: str):
+        """Crea o actualiza el índice RAG con documentos HTML/CSS desde una carpeta local.
+        Esta carpeta contiene archivos HTML que se cargarán y procesarán para
+        crear o actualizar el índice RAG utilizado para la recuperación de patrones.
+        """
+        raise NotImplementedError("RAG index creation not implemented yet.")
 
     def invoke(self, visual_analysis: dict[str, Any], top_k: int = 5) -> list[tuple]:
         """
@@ -206,8 +233,6 @@ class RAGAgent:
 
         except Exception as e:
             logger.error(f"Error retrieving patterns: {e}", exc_info=True)
-            logger.error(f"Error retrieving patterns: {e}", exc_info=True)
-            print(f"Error retrieving patterns: {e}")
             return []
 
     def get_rag_status(self) -> dict[str, Any]:
@@ -234,3 +259,9 @@ class RAGAgent:
 
         except Exception as e:
             return {"status": "error", "message": f"Error getting RAG status: {str(e)}"}
+
+
+if __name__ == "__main__":
+    agent = RAGAgent()
+    status = agent.initialize_websight_rag_pipeline()
+    print(f"RAG initialization status: {status}")
