@@ -66,4 +66,4 @@ build-html:
 	$(PYTHON_INTERPRETER) -m $(WEBSIGHT_LOADER_MODULE) --max-examples=$(WEBSIGHT_MAX_EXAMPLES)
 
 evaluate-retrieval:
-	$(PYTHON_INTERPRETER) -m src.rag.evaluators.evaluate_retrieval --docs data/evaluate/docs_ui_code_en.jsonl --qrels data/evaluate/qrels_ui_code_en.csv --ks 3,5 --top_retrieve 10 --top_final 5
+	$(PYTHON_INTERPRETER) -m src.agents.rag_agent.rag.evaluators.evaluate_retrieval --docs data/evaluate/docs_ui_code_en.jsonl --qrels data/evaluate/qrels_ui_code_en.csv --ks 3,5 --top_retrieve 10 --top_final 5

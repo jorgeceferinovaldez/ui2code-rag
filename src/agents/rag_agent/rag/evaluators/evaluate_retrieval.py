@@ -13,7 +13,7 @@ from ..core.rag_pipeline import RagPipeline
 
 def resolve_path(p: str) -> Path:
     pp = Path(p)
-    return pp if pp.is_absolute() else (project_dir / pp)
+    return pp if pp.is_absolute() else (project_dir() / pp)
 
 
 def evaluate(pipeline: RagPipeline, qrels, ks=(5, 10), top_retrieve=50, top_final=10):
