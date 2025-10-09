@@ -8,7 +8,7 @@
 
 | Subtitulo       | UI2Code                                                                                                                                                                                                                                                            |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Descrpción**  | UI2Code es un sistema avanzado que convierte diseños de interfaces <br/> de usuario en código  HTML/Tailwind CSS utilizando IA. Combina <br/> análisis visual inteligente con búsqueda semántica de patrones de <br/> código para generar código limpio y moderno. |
+| **Descripción**  | UI2Code es un sistema avanzado que convierte diseños de interfaces <br/> de usuario en código  HTML/Tailwind CSS utilizando IA. Combina <br/> análisis visual inteligente con búsqueda semántica de patrones de <br/> código para generar código limpio y moderno. |
 | **Integrantes**:  
                   - Noelia Melina Qualindi (noelia.qualindi@gmail.com)
                   - Fabricio Denardi (denardifabricio@gmail.com) 
@@ -248,6 +248,9 @@ El sistema implementa una arquitectura multi-agente coordinada mediante protocol
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
+![Workflow Completo](./docs/diagrama-flujo-arquitectura-multi-agente.png)
+
+
 ### Componentes del Sistema RAG (src/agents/rag_agent/rag/)
 
 El flujo principal usa estos componentes específicos:
@@ -313,6 +316,7 @@ download_websight_data()    load_full_websight_pipeline()
          Top-K resultados finales
          con html_code completo
 ```
+![Workflow Pipeline RAG](./docs/diagrama-flujo-rag-pipeline.png)
 
 **Nota**: PDFLoader existe en el código pero **NO se usa** en el flujo principal UI-to-Code. Solo aparece en páginas legacy de Streamlit (System Status, Corpus Information) para compatibilidad con corpus de PDFs antiguos.
 
@@ -448,189 +452,250 @@ Si `data/websight/` está vacío, el usuario puede descargar el dataset desde la
 ## Estructura principal del proyecto
 
 ```bash
-Ui2Code/
-├── app                          # Aplicación Streamlit
-│   └── streamlit_app.py         # Aplicación principal del sistema (UI multi-página)
-├── corpus                       # Documentos PDF (corpus legacy)
-├── data                         # Datos del sistema
+ui2code-rag/
+├── corpus/                      # Corpus de datos (Es un directorio legado del sistema original)
+│   └── websight/                # Corpus WebSight (puede almacenar procesados) (Es un directorio legado del sistema original)
+├── data/                        # Datos del sistema
 │   ├── evaluate/                # Framework de evaluación de retrieval
 │   │   ├── docs_ui_code_en.jsonl           # 9 documentos HTML para evaluación
-│   │   ├── qrels_ui_code_en.csv            # Query-document relevance labels
 │   │   ├── eval_retrieval_aggregated.csv   # Métricas agregadas (P@k, R@k, NDCG, MRR)
-│   │   └── eval_retrieval_per_query.csv    # Resultados por query
-│   ├── websight/                # Corpus principal: 900 ejemplos HTML/CSS del dataset WebSight
-│   └── ui_examples/             # Ejemplos de imágenes UI para pruebas
-├── docs                         # Documentación del sistema
-├── logs                         # Archivos de registro del sistema
-├── src                          # Código fuente del sistema
-│   ├── agents/                  # Capa de agentes (usa src/rag/)
-│   │   ├── code_agent/          # Agente de generación HTML/Tailwind (puerto 10001)
-│   │   │   ├── src/agent/code_agent.py      # Lógica de generación + anti-hallucination
-│   │   │   ├── src/texts/prompts.py         # Prompts optimizados con validación
-│   │   │   └── src/config.py                # Lee CODE_MODEL de .env raíz
-│   │   ├── orchestator_agent/   # Orquestador A2A con manejo de errores
-│   │   ├── rag_agent/           # Wrapper que carga WebSight y enriquece patrones
-│   │   └── visual_agent/        # Agente de análisis visual (puerto 10000)
-│   │       └── src/config.py                # Lee VISUAL_MODEL de .env raíz
-│   ├── rag/                     # Capa core del sistema RAG
-│   │   ├── ingestion/
-│   │   │   ├── websight_loader.py          # Carga 900 documentos de data/websight/
-│   │   │   └── pdf_loader.py               # Carga PDFs (corpus legacy)
-│   │   ├── core/
-│   │   │   └── rag_pipeline.py             # Pipeline híbrido BM25 + Vector + Rerank
-│   │   ├── search/
-│   │   │   ├── bm25_search.py              # Búsqueda léxica
-│   │   │   ├── pinecone_search.py          # Búsqueda vectorial (namespace: html-css-examples)
-│   │   │   └── reranking.py                # Cross-encoder reranking
-│   │   └── evaluators/
-│   │       └── evaluate_retrieval.py       # Evaluación con P@k, R@k, NDCG, MRR
-│   ├── runtime                  # Entorno de ejecución
+│   │   └── eval_retrieval_per_query.csv    # Resultados detallados por query
+│   ├── generated_code/          # Códigos HTML generados por el sistema
+│   │   ├── generated_YYYYMMDD_HHMMSS.html  # HTML generado
+│   │   └── generated_YYYYMMDD_HHMMSS.json  # Metadata de generación
+│   ├── temp_images/             # Imágenes temporales subidas + análisis
+│   │   ├── upload_*.jpg         # Imágenes subidas por usuarios
+│   │   └── analysis_*.json      # Análisis visuales guardados
+│   └── websight/                # Corpus principal: 900 JSONs del dataset WebSight
+│       ├── websight_0.json
+│       ├── websight_100.json
+│       └── ...                  # websight_200.json ... websight_900.json
+├── docs/                        # Documentación y diagramas
+│   ├── diagrama-flujo-arquitectura-multi-agente.png
+│   └── diagrama-flujo-rag-pipeline.png
+├── logs/                        # Logs del sistema (rotativos por fecha)
+│   └── ui2code.YYYY-MM-DD.log
+├── src/                         # Código fuente principal
+│   ├── agents/                  # Capa de agentes multi-agente
+│   │   ├── code_a2a_agent/      # Code Agent A2A (puerto 10001)
+│   │   │   ├── .env             # Config: OPENROUTER_API_KEY, GUARDRAILS_API_KEY, OPENROUTER_CODE_MODEL
+│   │   │   └── src/
+│   │   │       ├── agent/code_agent.py      # Generación HTML + anti-hallucination
+│   │   │       ├── texts/prompts.py         # Prompts optimizados con validación
+│   │   │       └── config.py                # Lee CODE_MODEL de .env local
+│   │   ├── code_agent/          # Code Agent legacy (no usado en producción)
+│   │   ├── orchestator_agent/   # Orquestador A2A (coordina Visual + RAG + Code)
+│   │   │   ├── orchestator_agent.py         # Lógica de coordinación JSONRPC
+│   │   │   └── utils.py                     # Guardado de artefactos
+│   │   ├── rag_agent/           # RAG Agent (búsqueda híbrida)
+│   │   │   ├── rag_agent.py                 # Wrapper que carga WebSight
+│   │   │   └── rag/                         # Core RAG (ingestion, search, eval)
+│   │   │       ├── adapters/pinecone_adapter.py   # Pinecone vectorstore
+│   │   │       ├── core/
+│   │   │       │   ├── documents.py         # Modelo Document
+│   │   │       │   ├── rag_pipeline.py      # Pipeline BM25 + Vector + Rerank
+│   │   │       │   └── io_utils.py          # Load docs/qrels para eval
+│   │   │       ├── ingestion/
+│   │   │       │   ├── websight_loader.py   # Descarga + carga WebSight JSONs
+│   │   │       │   └── pdf_loader.py        # Carga PDFs (legacy)
+│   │   │       ├── search/
+│   │   │       │   ├── bm25_search.py       # Búsqueda léxica
+│   │   │       │   └── reranking.py         # Cross-encoder (ms-marco-MiniLM)
+│   │   │       └── evaluators/
+│   │   │           └── evaluate_retrieval.py # Métricas P@k, R@k, NDCG, MRR
+│   │   ├── visual_a2a_agent/    # Visual Agent A2A (puerto 10000)
+│   │   │   ├── .env             # Config: OPENROUTER_API_KEY, GUARDRAILS_API_KEY, OPENROUTER_VISUAL_MODEL
+│   │   │   └── src/
+│   │   │       ├── agent/visual_agent.py    # Análisis visual con LLM vision
+│   │   │       └── config.py                # Lee VISUAL_MODEL de .env local
+│   │   └── visual_agent/        # Visual Agent legacy (no usado en producción)
+│   ├── app/                     # Aplicación Streamlit (puerto 8501)
+│   │   ├── main.py              # Entry point + inicialización RAG
+│   │   ├── pages/               # Páginas Streamlit
+│   │   │   ├── 01_query_interface.py        # Búsqueda RAG + Prompt→HTML
+│   │   │   ├── 02_ui_to_code.py             # UI-to-Code principal
+│   │   │   ├── 03_evaluations.py            # Framework de evaluación
+│   │   │   ├── 04_system_status.py          # Estado del sistema
+│   │   │   └── 05_corpus_information.py     # Info del corpus
+│   │   ├── services/            # Servicios de la app
+│   │   │   ├── agents.py                    # get_orchestrator, get_rag_agent
+│   │   │   └── rag_pipeline.py              # get_legacy_pdf_pipeline
+│   │   ├── ui/                  # Componentes UI
+│   │   │   ├── components/code_preview.py   # Preview HTML
+│   │   │   ├── theme.py                     # Tema violeta custom
+│   │   │   └── preloader.py                 # Splash screen
+│   │   └── views/               # Vistas renderizadas por pages
+│   │       ├── ui_to_code.py                # Lógica UI→Code
+│   │       ├── evaluations.py               # Lógica evaluación
+│   │       ├── system_status.py             # Lógica status
+│   │       └── corpus_info.py               # Lógica corpus info
+│   ├── common/                  # Utilidades comunes (io, telemetry, utils)
 │   ├── config.py                # Configuración dinámica con pyprojroot
-│   ├── config.yaml              # Configuración YAML (puertos agentes: 10000, 10001)
-│   └── logging_config.py        # Configuración de logging
-├── tests                        # Pruebas del sistema
-├── .env.example                 # Variables de entorno de ejemplo
-├── .env                         # Variables de entorno (VISUAL_MODEL, CODE_MODEL, API keys)
-├── check_deps.py                # Verificación de dependencias
-├── download_websight.py         # Descarga dataset WebSight de HuggingFace
+│   ├── config.yaml              # Config YAML (URLs agentes, timeouts)
+│   ├── logging_config.py        # Config de logs (loguru)
+│   ├── rag/                     # RAG core legacy (no usado, ver agents/rag_agent/rag/)
+│   ├── runtime/                 # Runtime adapters y pipelines
+│   ├── scripts/                 # Scripts utilitarios
+│   │   └── download_websight.py             # Descarga WebSight desde HuggingFace
+│   └── vectorstore/             # Chroma vectorstore (no usado, se usa Pinecone)
+├── tests/                       # Tests del sistema
+│   └── test_image.png           # Imagen de prueba
+├── ui_examples/                 # 100 ejemplos HTML/JSON de WebSight (fallback)
+│   ├── websight_000000.html
+│   ├── websight_000000.json
+│   └── ...                      # websight_000001 ... websight_000099
+├── .env                         # Variables de entorno raíz (PINECONE_API_KEY)
+├── .env.example                 # Template de variables de entorno
+├── docker-compose.yaml          # Orquestación de contenedores Docker
+├── Dockerfile                   # Imagen Docker del sistema
 ├── Makefile                     # Comandos del sistema
-│   # make run-visual-agent      # Inicia Visual Agent (puerto 10000)
-│   # make run-code-agent        # Inicia Code Agent (puerto 10001)
+│   # make run-visual-agent      # Inicia Visual Agent A2A (puerto 10000)
+│   # make run-code-agent        # Inicia Code Agent A2A (puerto 10001)
 │   # make run-server            # Inicia Streamlit (puerto 8501)
-├── poetry.lock                  # Dependencias fijadas
-├── pyproject.toml               # Configuración del proyecto
-├── quick_start.py               # Script de inicio rápido
+├── pyproject.toml               # Configuración Poetry + dependencias
 ├── README.md                    # Este archivo
-├── requirements-dev.txt         # Dependencias de desarrollo
-├── requirements.txt             # Dependencias de producción
-├── run_streamlit.py             # Lanzador de Streamlit
-└── setup.py                     # Script de instalación
+├── requirements.txt             # Dependencias pip (producción)
+├── requirements-dev.txt         # Dependencias pip (desarrollo)
+└── run.sh                       # Script de inicio automático con Docker Compose
 ```
-
-<!--  https://tree.nathanfriend.com/
-Ui2Code
-  app                     
-    streamlit_app.py      # Aplicación principal del sistema
-  corpus                   # Conjunto de documentos para el sistema
-  data                     # Datos utilizados por el sistema
-  docs                     # Documentación del sistema
-  logs                     # Archivos de registro del sistema
-  src                      # Código fuente del sistema
-    agents                 # Agentes del sistema
-      code_agent           # Agente de código
-      orchestator_agent    # Agente orquestador
-      rag_agent            # Agente RAG
-      visual_agent         # Agente visual
-    rag                     # Sistema RAG
-    runtime                 # Entorno de ejecución
-    config.py               # Configuración del sistema
-    config.yaml             # Configuración del sistema
-    logging_config.py       # Configuración de registro
-  tests                     # Pruebas del sistema
-  ui_examples               # Ejemplos de interfaz de usuario
-  .env.example              # Archivo de ejemplo de variables de entorno
-  check_deps.py             # Verificación de dependencias
-  download_websight.py      # Descarga de datos de WebSight
-  Makefile                  # Archivo Makefile
-  poetry.lock               # Archivo de fijación de dependencias de Poetry
-  pyproject.toml            # Archivo de configuración de Poetry
-  quick_start.py            # Guía de inicio rápido
-  README.md                 # Archivo README
-  requirements-dev.txt      # Dependencias de desarrollo
-  requirements.txt          # Dependencias de producción
-  run_streamlit.py          # Ejecutar la aplicación Streamlit
-  setup.py                  # Script de configuración
- -->
 
 ## Instalación y Configuración
 
 ### Prerequisitos
 
-- Python 3.9+ (recomendado 3.10 o superior)
-- Entorno virtual (recomendado)
+**Si usas Docker (recomendado):**
+- Docker y Docker Compose instalados
+- No necesitas Python, dependencias, ni entornos virtuales locales
+
+**Si instalas manualmente (sin Docker):**
+- Python 3.10 - 3.12 (requerido: `>3.10, <3.13` según Streamlit)
+- pip o uv para gestión de paquetes
+- Entorno virtual (recomendado: venv o conda)
 
 ### Dependencias Principales
 
 **Core del sistema:**
 - `streamlit>=1.28.0` - Interfaz web interactiva
 - `openai>=1.0.0` - Cliente API para OpenAI/OpenRouter
-- `sentence-transformers>=2.2.0` - Embeddings para RAG
+- `sentence-transformers>=5.1.1` - Embeddings para RAG (all-MiniLM-L6-v2)
 - `pinecone>=3.0.0` - Base de datos vectorial
+- `rank-bm25>=0.2.2` - Búsqueda BM25 léxica
 
-**Procesamiento de imágenes:**
-- `opencv-python>=4.8.0` - Visión por computadora
+**Procesamiento de datos:**
+- `opencv-python>=4.12.0` - Visión por computadora (dev)
 - `pillow>=10.1.0` - Manipulación de imágenes
 - `beautifulsoup4>=4.12.0` - Parsing de HTML
+- `numpy>=1.24.0` - Operaciones numéricas
+- `pandas>=2.0.0` - Manipulación de datos
 
 **Datasets y utilidades:**
-- `datasets>=2.14.0` - Carga de WebSight dataset
+- `datasets>=2.14.0` - Carga de WebSight dataset de HuggingFace
 - `requests>=2.31.0` - Cliente HTTP
+- `pdfplumber>=0.11.0` - Lectura de PDFs (legacy)
 
-**A2A y Guardrails:**
-- `guardrails-ai>=0.6.6` - Framework de guardrails para IA
-- `click >=8.3.0<9.0.0)` - CLI para Python
-- `httpx >=0.28.1<0.29.0)` - Cliente HTTP asíncrono
-- `pydantic >=2.11.9<3.0.0)` - Validación de datos
-- `uvicorn >=0.37.0<0.38.0)` - Servidor ASGI
-- `sse-starlette >=3.0.2<4.0.0)` - SSE para Starlette
-- `starlette >=0.48.0<0.49.0)` - Servidor
-- `a2a-sdk >=0.3.6<0.4.0)` - SDK para agentes A2A
-- `nest-asyncio >=1.6.0<2.0.0)` - Soluciona asincrónica anidada
-- `loguru >=0.7.3<0.8.0)` - Logging avanzado
-- `pydantic-settings >=2.11.0<3.0.0)` - Configuración basada en Pydantic
+**Protocolo A2A y Guardrails:**
+- `a2a-sdk>=0.3.8` - SDK para comunicación Agent-to-Agent (JSONRPC)
+- `guardrails-ai>=0.6.7` - Framework de validación para outputs de IA (dev)
+- `uvicorn>=0.37.0` - Servidor ASGI para agentes A2A (dev)
+- `nest-asyncio>=1.6.0` - Soluciona asyncio anidado
+- `loguru>=0.7.3` - Logging avanzado
+- `pydantic-settings>=2.11.0` - Configuración basada en Pydantic (dev)
+
+**Otros:**
+- `python-dotenv>=1.0.0` - Carga de variables de entorno
+- `pyyaml>=6.0.0` - Parsing de config.yaml
+- `pyprojroot>=0.3.0` - Resolución de paths del proyecto
 
 ### Métodos de Instalación
 
-#### Método 1: Usando Make (Recomendado)
-
-```bash
-make quick-start  # Muestra la guía completa de configuración
-make install      # Instalar dependencias
-make setup-dirs   # Crear estructura de directorios
-```
-
-#### Método 2: Instalación Manual
+#### Método 1: Usando pip (Instalación Manual)
 
 ```bash
 # Crear entorno virtual
 python -m venv venv
 source venv/bin/activate  # En Windows: venv\Scripts\activate
 
-# Instalar dependencias
+# Instalar dependencias de producción
+pip install -r requirements.txt
+
+# O instalar con dependencias de desarrollo
+pip install -r requirements-dev.txt
+
+# O instalar como paquete editable (recomendado para desarrollo)
 pip install -e .
 
 # Configurar directorios del proyecto
 python -c "from src.config import create_all_directories; create_all_directories()"
 ```
 
-### Configuración
+#### Método 2: Usando uv (Más rápido)
 
-1. **Copiar plantilla de entorno**:
-   ```bash
-   cp .env.example .env
-   ```
+```bash
+# Instalar uv si no lo tienes
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-2. **Configurar claves API** (editar .env):
-   ```env
-   # OpenRouter (recomendado para UI-to-Code)
-   OPENROUTER_API_KEY=sk-or-v1-tu_clave_openrouter_aqui
-   VISUAL_MODEL=google/gemini-flash-1.5
-   CODE_MODEL=deepseek/deepseek-r1-distill-llama-8b
-   # Alternative models:
-   # CODE_MODEL=deepseek/deepseek-r1-distill-llama-70b:free (más potente, gratis)
-   
-   # Pinecone (opcional pero recomendado)
-   PINECONE_API_KEY=tu_clave_pinecone_aqui
-   PINECONE_INDEX=rag-index
-   
-   # OpenAI (alternativo)
-   OPENAI_API_KEY=sk-tu_clave_openai_aqui
-   ```
+# Crear entorno virtual y instalar dependencias
+uv venv
+source .venv/bin/activate  # En Windows: .venv\Scripts\activate
+uv pip install -e .
+```
 
-3. **Verificar configuración**:
-   ```bash
-   make check-config
-   ```
+### Configuración (Solo Instalación Manual)
+
+**Nota**: Si usas Docker con `run.sh`, este script configura automáticamente todos los `.env` necesarios.
+
+#### 1. Configurar Guardrails
+
+```bash
+# Ejecutar configuración de Guardrails
+make run-guardrails-configuration
+
+# O manualmente
+guardrails configure
+guardrails hub install hub://guardrails/regex_match
+guardrails hub install hub://guardrails/valid_json
+guardrails hub install hub://guardrails/web_sanitization
+```
+
+#### 2. Configurar Variables de Entorno
+
+Necesitas crear **3 archivos .env** en las ubicaciones correctas:
+
+**a) `.env` raíz (para Pinecone):**
+```bash
+cp .env.example .env
+# Editar y agregar:
+PINECONE_API_KEY=tu_clave_pinecone_aqui
+PINECONE_INDEX=pln3-index
+```
+
+**b) `src/agents/visual_a2a_agent/.env` (para Visual Agent):**
+```env
+OPENROUTER_API_KEY=sk-or-v1-tu_clave_openrouter_aqui
+GUARDRAILS_API_KEY=tu_clave_guardrails_aqui
+OPENROUTER_VISUAL_MODEL=google/gemini-2.0-flash-exp:free
+```
+
+**c) `src/agents/code_a2a_agent/.env` (para Code Agent):**
+```env
+OPENROUTER_API_KEY=sk-or-v1-tu_clave_openrouter_aqui
+GUARDRAILS_API_KEY=tu_clave_guardrails_aqui
+OPENROUTER_CODE_MODEL=deepseek/deepseek-r1-distill-llama-70b:free
+```
+
+#### 3. Descargar Dataset WebSight (Opcional)
+
+El dataset se descarga automáticamente desde la UI al iniciar, pero puedes pre-descargarlo:
+
+```bash
+# Descargar 1000 ejemplos del dataset WebSight
+make download-websight
+
+# O manualmente con curl
+mkdir -p data/websight
+curl -X GET "https://datasets-server.huggingface.co/rows?dataset=HuggingFaceM4%2FWebSight&config=v0.2&split=train&offset=0&length=100" -o data/websight/websight_0.json
+# Repetir para offset 100, 200, 300... hasta 1000
+```
 
 ## Uso
 
@@ -752,36 +817,33 @@ El sistema incluye una interfaz web completa para evaluar el rendimiento del ret
 - **Precision@k**: Proporción de resultados relevantes en top-k
 - **Recall@k**: Proporción de documentos relevantes recuperados en top-k
 
-### 4. Interfaz de Programación
 
-También puedes usar el sistema RAG programáticamente:
+## Comandos Make Disponibles
 
-<!-- TODO: Actualizar ejemplo de uso programático. -->
-```python
-from src.rag.core.rag_pipeline import RagPipeline
-from src.rag.ingestion.pdf_loader import folder_pdfs_to_documents
-from src.config import corpus_dir
-
-# Cargar documentos
-docs = folder_pdfs_to_documents(corpus_dir())
-
-# Crear pipeline
-pipeline = RagPipeline(docs)
-
-# Consultar
-results = pipeline.retrieve_and_rerank("Tu pregunta aquí")
-context = pipeline.build_cited_context(results)
-print(context)
-```
-
-## Pruebas y Desarrollo
+El Makefile incluye los siguientes comandos útiles:
 
 ```bash
-make test         # Ejecutar pruebas
-make lint         # Linting de código
-make format       # Formateo de código
-make clean        # Limpiar archivos cache
+# Descargar dataset WebSight (1000 ejemplos desde HuggingFace)
+make download-websight
+
+# Configurar Guardrails
+make run-guardrails-configuration
+
+# Iniciar agentes A2A
+make run-visual-agent     # Puerto 10000
+make run-code-agent       # Puerto 10001
+
+# Iniciar Streamlit
+make run-server           # Puerto 8501
+
+# Construir índice Pinecone (legacy, ahora automático)
+make build-html
+
+# Ejecutar evaluación de retrieval
+make evaluate-retrieval
 ```
+
+**Nota**: Los comandos `make test`, `make lint`, `make format`, `make clean` no están implementados en el Makefile actual.
 
 ## Evaluación
 
@@ -886,40 +948,66 @@ results_path = get_path('outputs.results_dir', 'experiment_1')
 ### Comandos de Debug
 
 ```bash
-make check-config    # Verificar configuración
-make verify-env      # Verificar entorno Python
-python -c "from src.config import project_dir; print(project_dir())"
-streamlit --version  # Verificar instalación de Streamlit
+# Verificar rutas del proyecto
+python -c "from src.config import project_dir, corpus_dir, websight_data_dir; print(f'Project: {project_dir()}'); print(f'Corpus: {corpus_dir()}'); print(f'WebSight: {websight_data_dir()}')"
+
+# Verificar instalación de Streamlit
+streamlit --version
+
+# Verificar versión de Python
+python --version
+
+# Probar carga de RAG Agent
+python -c "from src.agents.rag_agent.rag_agent import RAGAgent; agent = RAGAgent(); print('RAG Agent OK')"
 ```
 
-## Guía de Inicio
+## Guía de Inicio Rápido (Resumen)
 
-1. **Clonar y Configurar**:
-   ```bash
-   git clone <tu-repo>
-   cd ui-to-code-system
-   make install
-   ```
+### Opción A: Docker (Más Fácil)
 
-2. **Añadir Tus Documentos**:
-   ```bash
-   cp tus_pdfs/* corpus/
-   ```
+```bash
+git clone <tu-repo>
+cd ui2code-rag
+bash run.sh  # Configura y levanta todo automáticamente
+# Abre http://localhost:8501
+```
 
-3. **Configurar Servicios** (Opcional pero recomendado):
-   ```bash
-   cp .env.example .env
-   # Editar .env con tus claves de OpenAI y Pinecone
-   ```
+### Opción B: Manual
 
-4. **Lanzar la Interfaz**:
-   ```bash
-   python run_streamlit.py
-   ```
+```bash
+git clone <tu-repo>
+cd ui2code-rag
 
-5. **Comenzar a usar**: Abre http://localhost:8501 y:
-   - Ve a "UI to Code" para convertir imágenes a código HTML/CSS
-   - Usa "Query Interface" para búsquedas RAG tradicionales
+# 1. Instalar dependencias
+pip install -e .
+
+# 2. Configurar Guardrails
+make run-guardrails-configuration
+
+# 3. Configurar .env (ver sección "Configuración")
+cp .env.example .env
+# Editar los 3 archivos .env necesarios
+
+# 4. Descargar WebSight (opcional, se auto-descarga desde UI)
+make download-websight
+
+# 5. Iniciar agentes (3 terminales separadas)
+make run-visual-agent   # Terminal 1
+make run-code-agent     # Terminal 2
+make run-server         # Terminal 3
+
+# 6. Abrir navegador
+# http://localhost:8501
+```
+
+### Comenzar a Usar
+
+Una vez en http://localhost:8501:
+- **"UI to Code"**: Sube imagen de diseño UI → genera HTML/Tailwind
+- **"Query Interface"**: Busca patrones HTML o genera desde prompt
+- **"Evaluaciones"**: Ejecuta métricas de retrieval (P@k, R@k, NDCG, MRR)
+- **"System Status"**: Verifica estado de agentes y corpus
+- **"Corpus Information"**: Explora los 900 documentos WebSight
 
 ## Ejemplos de Instrucciones Personalizadas
 
@@ -1017,10 +1105,19 @@ Licencia MIT - ver archivo LICENSE para detalles.
 ## Contribuciones
 
 1. Hacer fork del repositorio
-2. Crear una rama de característica
-3. Hacer cambios con pruebas
-4. Ejecutar `make format lint test`
-5. Enviar pull request
+2. Crear una rama de característica (`git checkout -b feature/nueva-funcionalidad`)
+3. Hacer cambios con documentación y pruebas
+4. Verificar que el código funciona correctamente:
+   ```bash
+   # Probar localmente
+   make run-visual-agent  # Terminal 1
+   make run-code-agent    # Terminal 2
+   make run-server        # Terminal 3
+   # Verificar en http://localhost:8501
+   ```
+5. Commit de cambios (`git commit -m "Add: nueva funcionalidad"`)
+6. Push a la rama (`git push origin feature/nueva-funcionalidad`)
+7. Abrir Pull Request con descripción detallada
 
 ## Documentación
 
