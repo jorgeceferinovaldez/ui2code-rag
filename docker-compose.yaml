@@ -42,6 +42,10 @@ services:
     depends_on:
       - code-agent
       - visual-agent
+    volumes:
+      - ./data:/app/data:rw
+    environment:
+      - DATA_DIR=/app/data
 
 networks:
   agents-net:

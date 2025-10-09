@@ -83,58 +83,6 @@ def violet_button(label, key, *, on_click=None, disabled=False, help=None, full_
     """, unsafe_allow_html=True)
     return clicked
 
-
-def code_block_no_hover_hide(code: str, *, language: str = "html", key: str | None = None):
-    """
-    Renderiza un st.code y neutraliza cualquier regla de :hover que intente ocultarlo
-    (opacity/visibility/display/transform/pointer-events). Sólo afecta a este bloque.
-    También fuerza height:auto cuando Streamlit pone <pre height="0">.
-    """
-    anchor = key or f"code_{uuid.uuid4().hex[:8]}"
-    st.markdown(f'<div id="{anchor}"></div>', unsafe_allow_html=True)
-
-    st.code(code, language=language)
-
-    st.markdown(
-        f"""
-<style>
-/* Contenedor inmediato que Streamlit inserta después del ancla */
-div#{anchor} + div,
-div#{anchor} + div * {{
-  opacity: 1 !important;
-  visibility: visible !important;
-  transform: none !important;
-  filter: none !important;
-  pointer-events: auto !important;
-}}
-div#{anchor} + div pre,
-div#{anchor} + div code,
-div#{anchor} + div [data-testid="stCodeBlock"] {{
-  display: block !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  overflow: auto !important;
-}}
-/* Fix específico para <pre height="0"> */
-div#{anchor} + div pre[height="0"] {{
-  height: auto !important;
-  min-height: 120px !important;   /* ajustable */
-  max-height: none !important;
-}}
-/* Mantener visible incluso cuando hay hover en el propio bloque o descendientes */
-div#{anchor} + div:hover,
-div#{anchor} + div:hover * {{
-  opacity: 1 !important;
-  visibility: visible !important;
-  transform: none !important;
-  filter: none !important;
-}}
-</style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
 def apply_theme():
     cfg = _cfg()
     primary, bg, bg2, text, accent, font = (

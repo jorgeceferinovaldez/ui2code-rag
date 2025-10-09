@@ -33,6 +33,7 @@ def render():
         tmp = temp_images_dir(); tmp.mkdir(parents=True, exist_ok=True)
         path = tmp / f"upload_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.name}"
         with open(path, "wb") as f: f.write(file.getbuffer())
+        
 
         if st.button("🚀 Analizar & Generar", type="primary"):
             pbar = st.progress(0); msg = st.empty()
@@ -74,6 +75,7 @@ def render():
 
                 html_code = result.get("html_code","")
                 st.subheader("💻 HTML/Tailwind generado")
+          
                 st.code(html_code or "<!-- empty -->", language="html")
                 st.subheader("🌐 Preview")
                 html_preview(html_code)

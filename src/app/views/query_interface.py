@@ -84,7 +84,6 @@ def stable_code_block(code: str, *, language: str = "html", key: str | None = No
 
 def render():
     st.header("🔎 Query Interface")
-
     mode = st.radio(
         "Modo",
         ["RAG Search (HTML Patterns)", "Prompt → HTML"],
@@ -144,11 +143,11 @@ def render():
                 st.error(f"Falló la generación: {result['error']}")
                 return
             html_code = result.get("html_code", "")
-            from app.ui.theme import code_block_no_hover_hide
 
             st.subheader("💻 Código generado")
             render_code = html_code or "<!-- empty -->"
-            code_block_no_hover_hide(render_code, language="html", key="gen_code_block")
+
+            st.code(render_code, language="html")
             
             with st.expander("🛠️ Detalles"):
                 st.json(result.get("generation_metadata", {}))
