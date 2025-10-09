@@ -99,7 +99,7 @@
 
 \section{Resumen}
 
-UI2Code-RAG es un sistema multi-agente que convierte diseños de interfaz de usuario (imágenes estáticas) en código HTML + Tailwind CSS funcional y estandarizado, combinando análisis visual con Inteligencia Artificial y RAG híbrido (BM25 + embeddings vectoriales + re-ranking con cross-encoder) sobre un corpus de 900 ejemplos HTML/CSS del dataset WebSight.
+UI2Code-RAG es un sistema multi-agente que convierte diseños de interfaz de usuario (imágenes estáticas) en código HTML + Tailwind CSS funcional y estandarizado mediante la combinación de análisis visual con Inteligencia Artificial y RAG híbrido (BM25 + embeddings vectoriales + re-ranking con cross-encoder) sobre un corpus de 900 ejemplos HTML/CSS del dataset WebSight.
 
 La arquitectura se orquesta mediante un \textbf{Orchestrator Agent A2A} que coordina tres agentes especializados:
 \begin{itemize}
@@ -110,17 +110,17 @@ La arquitectura se orquesta mediante un \textbf{Orchestrator Agent A2A} que coor
 
 El sistema incluye guardrails de validación de salidas (JSON, HTML, web sanitization) y una aplicación Streamlit multipágina que proporciona interfaces para: UI-to-Code, Query Interface, Evaluaciones, System Status y Corpus Information.
 
-\section{Presentación del Problema}
+\section{Presentación del problema}
 
 En ingeniería de software, uno de los principales problemas para las empresas que desarrollan grandes sistemas de información es el balance entre \textbf{estándares flexibles y estándares forzosos}. La estandarización de las prácticas de ingeniería de software siempre es mejor, usualmente sin importar el caso de uso, pero esto lleva a un mayor ``lead time''. En un mundo actual donde el ``time to market'' es uno de los principales atributos dentro de un proceso, este complejo problema lleva a soluciones del tipo \textit{``convention over configuration''}. 
 
 El potencial de los LLMs (Large Language Models) los hace aptos para este tipo de desarrollo, donde se puede forzar la convención de forma transparente para el desarrollador.
 
-\subsection{Contexto y Motivación}
+\subsection{Contexto y motivación}
 
 Con este tema en mente, \textbf{UI2Code} se posiciona con la misión de brindar a los desarrolladores \textbf{estandarización automática}, al generar código que cumpla con los estándares de la empresa en base a un diseño preliminar. Por un lado, los desarrolladores pueden partir de una base estandarizada y, por el otro, se reducen los tiempos de desarrollo para las empresas.
 
-\subsection{Desafíos Identificados}
+\subsection{Desafíos identificados}
 
 Sin embargo, existen varios desafíos técnicos:
 
@@ -138,16 +138,16 @@ Sin embargo, existen varios desafíos técnicos:
 
 \section{Objetivos}
 
-\subsection{Objetivo General}
+\subsection{Objetivo general}
 
-Desarrollar un sistema multi-agente que convierta imágenes de interfaces de usuario en código HTML/Tailwind CSS ``listo para usar'', minimizando alucinaciones y maximizando la reutilización de patrones estandarizados.
+Desarrollar un sistema multi-agente que convierta imágenes de interfaces de usuario en código HTML/Tailwind CSS ``listo para usar'' para minimizar alucinaciones y maximizar la reutilización de patrones estandarizados.
 
-\subsection{Objetivos Específicos}
+\subsection{Objetivos específicos}
 
 \begin{itemize}[leftmargin=*]
     \item \textbf{Conversión UI-to-Code}: Transformar imágenes de diseños UI en código HTML/Tailwind funcional y estandarizado.
     
-    \item \textbf{Recuperación y reutilización de patrones}: Implementar un sistema RAG híbrido para recuperar y reusar patrones de código similares, guiando la generación y reduciendo la deuda técnica.
+    \item \textbf{Recuperación y reutilización de patrones}: Implementar un sistema RAG híbrido para recuperar y reusar patrones de código similares con el fin de guiar la generación y reducir la deuda técnica.
     
     \item \textbf{Interfaz de usuario simplificada}: Exponer una interfaz web intuitiva para cargar imágenes, ajustar instrucciones personalizadas, visualizar resultados y descargar código generado.
     
@@ -166,25 +166,25 @@ Desarrollar un sistema multi-agente que convierta imágenes de interfaces de usu
     \item Arquitectura multi-agente con protocolo A2A (Agent-to-Agent)
 \end{itemize}
 
-\section{Técnicas y Tecnologías Utilizadas}
+\section{Técnicas y tecnologías utilizadas}
 
 \subsection{Modelos de Inteligencia Artificial}
 
-\subsubsection{Análisis Visual}
+\subsubsection{Análisis visual}
 \begin{itemize}
     \item \textbf{Gemini 2.0 Flash Exp} (Google): Modelo de visión gratuito para análisis de layout, componentes y estilos
     \item \textbf{GPT-4 Vision} (OpenAI): Alternativa de pago con mayor precisión
     \item \textbf{Claude 3.5 Sonnet} (Anthropic): Opción premium para casos complejos
 \end{itemize}
 
-\subsubsection{Generación de Código}
+\subsubsection{Generación de código}
 \begin{itemize}
     \item \textbf{DeepSeek R1 Distill Llama 70B}: Modelo gratuito optimizado para código
     \item \textbf{DeepSeek R1}: Versión de pago con mejor calidad
     \item Acceso vía \textbf{OpenRouter}: Plataforma que unifica el acceso a múltiples modelos con precios competitivos
 \end{itemize}
 
-\subsection{Sistema RAG Híbrido}
+\subsection{Sistema RAG híbrido}
 
 El sistema implementa un pipeline de recuperación de información de tres capas:
 
@@ -203,7 +203,7 @@ El sistema implementa un pipeline de recuperación de información de tres capas
     \end{itemize}
 \end{enumerate}
 
-\subsection{Infraestructura y Orquestación}
+\subsection{Infraestructura y orquestación}
 
 \subsubsection{Protocolo A2A (Agent-to-Agent)}
 \begin{itemize}
@@ -213,7 +213,7 @@ El sistema implementa un pipeline de recuperación de información de tres capas
     \item Servidor ASGI: Uvicorn + Starlette
 \end{itemize}
 
-\subsubsection{Validación y Guardrails}
+\subsubsection{Validación y guardrails}
 \begin{itemize}
     \item Framework: \texttt{guardrails-ai >= 0.6.7}
     \item Validadores utilizados:
@@ -226,7 +226,7 @@ El sistema implementa un pipeline de recuperación de información de tres capas
     \end{itemize}
 \end{itemize}
 
-\subsubsection{Aplicación Web y UI}
+\subsubsection{Aplicación web y UI}
 \begin{itemize}
     \item Framework: \texttt{Streamlit >= 1.28.0}
     \item Puerto: 8501
@@ -247,7 +247,7 @@ El sistema implementa un pipeline de recuperación de información de tres capas
     \item Portable a Kubernetes con herramientas como Kompose
 \end{itemize}
 
-\subsection{Datos y Corpus}
+\subsection{Datos y corpus}
 
 \subsubsection{Dataset WebSight}
 \begin{itemize}
@@ -263,7 +263,7 @@ El sistema implementa un pipeline de recuperación de información de tres capas
     \item Chunking: max\_tokens=400, overlap=100
 \end{itemize}
 
-\subsubsection{Dataset de Evaluación}
+\subsubsection{Dataset de evaluación}
 \begin{itemize}
     \item Ubicación: \texttt{data/evaluate/}
     \item Documentos: 9 ejemplos HTML con descripciones UI
@@ -271,7 +271,7 @@ El sistema implementa un pipeline de recuperación de información de tres capas
     \item Formato: JSONL + CSV
 \end{itemize}
 
-\subsection{Logging y Monitoreo}
+\subsection{Logging y monitoreo}
 \begin{itemize}
     \item Sistema de logging: \texttt{loguru >= 0.7.3}
     \item Logs estructurados en \texttt{logs/ui2code.YYYY-MM-DD.log}
@@ -279,13 +279,13 @@ El sistema implementa un pipeline de recuperación de información de tres capas
     \item Niveles configurables (DEBUG, INFO, WARNING, ERROR)
 \end{itemize}
 
-\section{Arquitectura del Sistema}
+\section{Arquitectura del sistema}
 
-\subsection{Visión General}
+\subsection{Visión general}
 
 El sistema UI2Code implementa una arquitectura multi-agente coordinada mediante el protocolo A2A (Agent-to-Agent), donde agentes especializados trabajan en conjunto para resolver el problema de conversión UI-to-Code.
 
-\subsection{Pipeline Lógico (Alto Nivel)}
+\subsection{Pipeline lógico (alto nivel)}
 
 El flujo completo del sistema sigue estos pasos:
 
@@ -331,9 +331,9 @@ El flujo completo del sistema sigue estos pasos:
     \end{itemize}
 \end{enumerate}
 
-\subsection{Componentes Principales}
+\subsection{Componentes principales}
 
-\subsubsection{Visual Agent (Puerto 10000)}
+\subsubsection{Visual agent (puerto 10000)}
 \begin{itemize}
     \item \textbf{Tecnología}: Agente A2A con modelos de visión-lenguaje
     \item \textbf{Modelos}: Gemini 2.0 Flash / GPT-4 Vision / Claude 3.5 Sonnet
@@ -342,7 +342,7 @@ El flujo completo del sistema sigue estos pasos:
     \item \textbf{Salida}: JSON estructurado con componentes, layout, estilo, color\_scheme
 \end{itemize}
 
-\subsubsection{RAG Agent (Módulo Python)}
+\subsubsection{RAG agent (módulo Python)}
 \begin{itemize}
     \item \textbf{Tecnología}: Agente determinista, sin servidor HTTP
     \item \textbf{Función}: Orquesta pipeline de recuperación híbrida
@@ -357,7 +357,7 @@ El flujo completo del sistema sigue estos pasos:
     \item \textbf{Enriquecimiento}: Agrega \texttt{html\_code} completo a metadata
 \end{itemize}
 
-\subsubsection{Code Agent (Puerto 10001)}
+\subsubsection{Code agent (puerto 10001)}
 \begin{itemize}
     \item \textbf{Tecnología}: Agente A2A con modelos de código
     \item \textbf{Modelos}: DeepSeek R1 70B / GPT-4 / Claude 3.5
@@ -373,7 +373,7 @@ El flujo completo del sistema sigue estos pasos:
     \item \textbf{Salida}: JSON con \texttt{html\_code} y \texttt{generation\_metadata}
 \end{itemize}
 
-\subsubsection{Orchestrator Agent}
+\subsubsection{Orchestrator agent}
 \begin{itemize}
     \item \textbf{Tecnología}: Agente determinista coordinador
     \item \textbf{Función}: Orquesta el flujo completo entre agentes
@@ -388,7 +388,7 @@ El flujo completo del sistema sigue estos pasos:
     \end{itemize}
 \end{itemize}
 
-\subsection{Diagrama de Flujo Completo}
+\subsection{Diagrama de flujo completo}
 
 El sistema sigue el flujo ilustrado en la Figura \ref{fig:arquitectura}, donde:
 
@@ -411,7 +411,7 @@ El sistema sigue el flujo ilustrado en la Figura \ref{fig:arquitectura}, donde:
     \item Streamlit presenta: análisis visual, patrones encontrados, código generado, preview HTML
 \end{enumerate}
 
-\subsection{Pipeline RAG Detallado}
+\subsection{Pipeline RAG detallado}
 
 El sistema RAG implementa un flujo de tres fases como se muestra en la Figura \ref{fig:rag}:
 
@@ -422,7 +422,7 @@ El sistema RAG implementa un flujo de tres fases como se muestra en la Figura \r
 \label{fig:rag}
 \end{figure}
 
-\subsubsection{Fase 1: Ingesta de Documentos}
+\subsubsection{Fase 1: Ingesta de documentos}
 \begin{itemize}
     \item \texttt{WebSightLoader.download\_websight\_data()}: Descarga dataset desde HuggingFace
     \item Almacenamiento en \texttt{data/websight/*.json}
@@ -438,7 +438,7 @@ El sistema RAG implementa un flujo de tres fases como se muestra en la Figura \r
     \item Proceso automático al inicializar \texttt{RagPipeline}
 \end{itemize}
 
-\subsubsection{Fase 3: Búsqueda Híbrida (método \texttt{invoke()})}
+\subsubsection{Fase 3: Búsqueda híbrida (método \texttt{invoke()})}
 \begin{enumerate}
     \item \textbf{BM25 Search}: Recuperación léxica de candidatos
     \item \textbf{Vector Search}: Consulta en Pinecone (cosine similarity)
@@ -448,11 +448,11 @@ El sistema RAG implementa un flujo de tres fases como se muestra en la Figura \r
     \item \textbf{Top-k final}: Retorna los k resultados más relevantes
 \end{enumerate}
 
-\subsection{Protocolos de Comunicación}
+\subsection{Protocolos de comunicación}
 
 \begin{table}[H]
 \centering
-\caption{Protocolos de Comunicación entre Componentes}
+\caption{Protocolos de comunicación entre componentes}
 \begin{tabular}{ll}
 \toprule
 \textbf{Comunicación} & \textbf{Protocolo} \\
@@ -466,43 +466,43 @@ RAG Agent $\leftrightarrow$ Pinecone & gRPC (Pinecone API) \\
 \end{tabular}
 \end{table}
 
-\subsection{Estructura de Directorios}
+\subsection{Estructura de directorios}
 
 La estructura del proyecto está organizada modularmente:
 
 \begin{lstlisting}[language=bash,caption={Estructura de Directorios Principal}]
 ui2code-rag/
-  |-- data/                        # Datos del sistema
-  |     |-- evaluate/                # Framework de evaluacion
+  |-- data/                      # Datos del sistema
+  |     |-- evaluate/            # Framework de evaluacion
   |     |     |-- docs_ui_code_en.jsonl
   |     |     |-- qrels_ui_code_en.csv
   |     |     `-- eval_retrieval_*.csv
   |     |-- generated_code/          # HTML generados
   |     |-- temp_images/             # Imagenes temporales
   |     `-- websight/                # 900 JSONs corpus
-  |-- docs/                        # Documentacion y diagramas
+  |-- docs/                      # Documentacion y diagramas
   |     |-- diagrama-flujo-arquitectura-multi-agente.png
   |     `-- diagrama-flujo-rag-pipeline.png
-  |-- logs/                        # Logs del sistema
+  |-- logs/                      # Logs del sistema
   |-- src/
   |     |-- agents/
-  |     |     |-- code_a2a_agent/      # Code Agent (puerto 10001)
-  |     |     |-- orchestator_agent/   # Coordinador
-  |     |     |-- rag_agent/           # RAG + WebSight
-  |     |     `-- visual_a2a_agent/    # Visual Agent (puerto 10000)
-  |     |-- app/                     # Streamlit (puerto 8501)
+  |     |     |-- code_a2a_agent/   # Code Agent (p. 10001)
+  |     |     |-- orchestator_agent/# Coordinador
+  |     |     |-- rag_agent/        # RAG + WebSight
+  |     |     `-- visual_a2a_agent/ # Visual Agent (p. 10000)
+  |     |-- app/                    # Streamlit (p. 8501)
   |     |     |-- main.py
-  |     |     |-- pages/               # Paginas multipagina
-  |     |     `-- views/               # Logica de vistas
-  |     `-- common/                  # Utilidades comunes
+  |     |     |-- pages/            # Paginas multipagina
+  |     |     `-- views/            # Logica de vistas
+  |     `-- common/                 # Utilidades comunes
   |-- docker-compose.yaml
   |-- Dockerfile
   |-- Makefile
-  |-- run.sh                       # Script de inicio automatico
+  |-- run.sh                 # Script de inicio automatico
   `-- requirements.txt
 \end{lstlisting}
 
-\section{Flujo Funcional - Interfaz de Usuario}
+\section{Flujo funcional - Interfaz de usuario}
 
 El sistema expone una aplicación web Streamlit multipágina accesible en \texttt{http://localhost:8501} con cinco secciones principales.
 
@@ -664,11 +664,11 @@ El sistema expone una aplicación web Streamlit multipágina accesible en \textt
     \end{itemize}
 \end{itemize}
 
-\section{Gobernanza de Calidad y Anti-Alucinación}
+\section{Gobernanza de calidad y anti-alucinación}
 
-\subsection{Estrategias Implementadas}
+\subsection{Estrategias implementadas}
 
-\subsubsection{RAG como Contexto Obligatorio}
+\subsubsection{RAG como contexto obligatorio}
 
 Los prompts del Code Agent incluyen citas explícitas de patrones recuperados para ``anclar'' la generación:
 
@@ -678,7 +678,7 @@ Los prompts del Code Agent incluyen citas explícitas de patrones recuperados pa
     \item Instrucciones para usar patrones como guía, no como copia literal
 \end{itemize}
 
-\subsubsection{Guardrails de Validación}
+\subsubsection{Guardrails de validación}
 
 Sistema de validaciones en múltiples capas:
 
@@ -697,7 +697,7 @@ Sistema de validaciones en múltiples capas:
 \end{tabular}
 \end{table}
 
-\subsubsection{Validación Anti-Hallucination en Code Agent}
+\subsubsection{Validación anti-hallucination en Code Agent}
 
 Método \texttt{\_validate\_html\_components()} implementado en Code Agent:
 
@@ -708,7 +708,7 @@ Método \texttt{\_validate\_html\_components()} implementado en Code Agent:
     \item \textbf{Ejemplo}: Si el análisis visual pide ``login form'', pero el código genera ``landing page completa con header y footer'', el sistema logea una advertencia
 \end{itemize}
 
-\subsubsection{Prompts Optimizados con Reglas Críticas}
+\subsubsection{Prompts optimizados con reglas críticas}
 
 Extracto del prompt del Code Agent (\texttt{src/agents/code\_agent/src/texts/prompts.py}):
 
@@ -721,7 +721,7 @@ CRITICAL RULES:
 5. DO NOT hallucinate complete landing pages from single components
 \end{lstlisting}
 
-\subsubsection{Fallback Controlado}
+\subsubsection{Fallback controlado}
 
 Cuando la evidencia visual es insuficiente:
 
@@ -731,7 +731,7 @@ Cuando la evidencia visual es insuficiente:
     \item Evita generación de código no utilizable
 \end{itemize}
 
-\subsubsection{Umbrales de Confianza en Recuperación}
+\subsubsection{Umbrales de confianza en recuperación}
 
 \begin{itemize}
     \item Si el recall efectivo del RAG cae bajo umbral configurado
@@ -739,7 +739,7 @@ Cuando la evidencia visual es insuficiente:
     \item Previene generación con contexto pobre
 \end{itemize}
 
-\subsection{Hallazgos Clave}
+\subsection{Hallazgos clave}
 
 \begin{enumerate}
     \item \textbf{Few-shots + patrones RAG reducen alucinación}: Restringir la libertad del LLM con ejemplos concretos y patrones recuperados disminuye significativamente la alucinación de layouts complejos.
@@ -753,13 +753,13 @@ Cuando la evidencia visual es insuficiente:
     \item \textbf{Separación de agentes facilita debugging}: La arquitectura multi-agente permite prompts más simples por agente y debugging localizado.
 \end{enumerate}
 
-\section{Implementación y Tooling}
+\section{Implementación y tooling}
 
-\subsection{Tecnologías Core}
+\subsection{Tecnologías core}
 
 \begin{table}[H]
 \centering
-\caption{Stack Tecnológico}
+\caption{Stack tecnológico}
 \begin{tabular}{lll}
 \toprule
 \textbf{Componente} & \textbf{Tecnología} & \textbf{Versión} \\
@@ -776,7 +776,7 @@ ASGI Server & Uvicorn & $\geq$ 0.37.0 \\
 \end{tabular}
 \end{table}
 
-\subsection{OpenRouter Integration}
+\subsection{OpenRouter integration}
 
 \textbf{Ventajas}:
 \begin{itemize}
@@ -797,7 +797,7 @@ CODE_MODEL=deepseek/deepseek-r1-distill-llama-70b:free
 # CODE_MODEL=deepseek/deepseek-r1
 \end{lstlisting}
 
-\subsection{Pinecone Vector Database}
+\subsection{Pinecone vector database}
 
 \textbf{Configuración}:
 \begin{itemize}
@@ -816,7 +816,7 @@ CODE_MODEL=deepseek/deepseek-r1-distill-llama-70b:free
     \item Verificación de conectividad en System Status
 \end{enumerate}
 
-\subsection{Streamlit como UI Acelerada}
+\subsection{Streamlit como UI acelerada}
 
 \textbf{Características utilizadas}:
 \begin{itemize}
@@ -849,7 +849,7 @@ visual_analysis = response["result"]["analysis"]
 # {"components": [...], "layout": "...", "style": "...", ...}
 \end{lstlisting}
 
-\subsection{Configuración Dinámica}
+\subsection{Configuración dinámica}
 
 \textbf{pyprojroot + YAML}:
 \begin{itemize}
@@ -869,7 +869,7 @@ agents:
     timeout: 120
 \end{lstlisting}
 
-\subsection{Scripts de Evaluación}
+\subsection{Scripts de evaluación}
 
 \textbf{Ubicación}: \texttt{src/agents/rag\_agent/rag/evaluators/evaluate\_retrieval.py}
 
@@ -889,9 +889,9 @@ python -m src.agents.rag_agent.rag.evaluators.evaluate_retrieval \
     \item \texttt{eval\_retrieval\_aggregated.csv}: Promedios macro
 \end{itemize}
 
-\section{Organización del Proyecto y División del Trabajo}
+\section{Organización del proyecto y división del trabajo}
 
-\subsection{Distribución de Responsabilidades}
+\subsection{Distribución de responsabilidades}
 
 \begin{table}[H]
 \centering
@@ -918,7 +918,7 @@ Interfaz visual (Streamlit) & C & C & C & D \\
 
 \textit{Leyenda: D = Desarrollo (responsabilidad principal), C = Colaboración (soporte y revisión)}
 
-\subsection{Metodología de Trabajo}
+\subsection{Metodología de trabajo}
 
 \begin{itemize}
     \item \textbf{Gestión}: Sprints semanales con reuniones de sincronización
@@ -928,9 +928,9 @@ Interfaz visual (Streamlit) & C & C & C & D \\
     \item \textbf{Documentación}: Markdown en repositorio + comentarios en código
 \end{itemize}
 
-\section{Resultados y Estado Actual}
+\section{Resultados y estado actual}
 
-\subsection{Casos Positivos}
+\subsection{Casos positivos}
 
 \begin{itemize}
     \item \textbf{UIs con estructura clara}: El sistema genera HTML/Tailwind coherente con grid/flex correctos, spacings razonables y componentes bien definidos (cards, buttons, forms).
@@ -944,7 +944,7 @@ Interfaz visual (Streamlit) & C & C & C & D \\
     \item \textbf{Personalización bilingüe}: Las instrucciones en español o inglés funcionan correctamente para customizar el output.
 \end{itemize}
 
-\subsection{Limitaciones Observadas}
+\subsection{Limitaciones observadas}
 
 \begin{enumerate}
     \item \textbf{Estados de UI no reseteados}: En ciertos flujos, botones o controles quedaban deshabilitados por estados no correctamente reinicializados en Streamlit.
@@ -958,11 +958,11 @@ Interfaz visual (Streamlit) & C & C & C & D \\
     \item \textbf{Modelos gratuitos con limitaciones}: Los modelos free de OpenRouter tienen rate limits que pueden causar delays en desarrollo intensivo.
 \end{enumerate}
 
-\subsection{Resultados de Evaluación del Sistema RAG}
+\subsection{Resultados de evaluación del sistema RAG}
 
 \begin{table}[H]
 \centering
-\caption{Métricas de Evaluación para Diferentes Valores de k}
+\caption{Métricas de evaluación para diferentes valores de k}
 \label{tab:metricas}
 \begingroup
 \footnotesize                 % achica fuente (podés probar \scriptsize)
@@ -980,7 +980,7 @@ Interfaz visual (Streamlit) & C & C & C & D \\
 \endgroup
 \end{table}
 
-\subsubsection{Significado de las Métricas}
+\subsubsection{Significado de las métricas}
 
 \begin{itemize}
     \item \textbf{k}: Número de resultados considerados (top-k)
@@ -990,7 +990,7 @@ Interfaz visual (Streamlit) & C & C & C & D \\
     \item \textbf{MRR (Pre/Post)}: Mean Reciprocal Rank - posición del primer resultado relevante (mayor es mejor)
 \end{itemize}
 
-\subsubsection{Interpretación de Resultados}
+\subsubsection{Interpretación de resultados}
 
 \begin{enumerate}
     \item \textbf{Alto recall (0.9 - 1.0)}: El sistema recupera casi todos los documentos relevantes en el top-k, indicando buena cobertura.
@@ -1004,7 +1004,7 @@ Interfaz visual (Streamlit) & C & C & C & D \\
     \item \textbf{Estabilidad en k=5}: Con k=5 se logra recall perfecto (1.0) manteniendo precisión razonable.
 \end{enumerate}
 
-\subsubsection{Resumen de Evaluación}
+\subsubsection{Resumen de evaluación}
 
 \begin{itemize}
     \item El sistema recupera casi todos los documentos relevantes (alto recall)
@@ -1013,7 +1013,7 @@ Interfaz visual (Streamlit) & C & C & C & D \\
     \item Los resultados validan la efectividad del enfoque híbrido BM25 + Vector + Re-ranking
 \end{itemize}
 
-\section{Lecciones Aprendidas}
+\section{Lecciones aprendidas}
 
 \begin{enumerate}
     \item \textbf{RAG + guardrails $>$ LLM puro}: Para la tarea de UI-to-Code, un sistema RAG con validaciones es significativamente superior a un LLM sin contexto.
@@ -1033,11 +1033,11 @@ Interfaz visual (Streamlit) & C & C & C & D \\
     \item \textbf{Logging estructurado es esencial}: Loguru facilitó debugging de flujos complejos multi-agente.
 \end{enumerate}
 
-\section{Roadmap Propuesto}
+\section{Roadmap propuesto}
 
-\subsection{Corto Plazo (1-3 meses)}
+\subsection{Corto plazo (1-3 meses)}
 
-\subsubsection{Mitigación de Alucinación y UX}
+\subsubsection{Mitigación de alucinación y UX}
 
 \begin{itemize}
     \item Prompts con ``chain-of-thought estructurada'' no-verbatim para que Visual Agent reporte evidencias explícitas (colores, jerarquías, distancias relativas)
@@ -1046,7 +1046,7 @@ Interfaz visual (Streamlit) & C & C & C & D \\
     \item Mejoras de UI: mover resultados siempre debajo del textarea, spinners por paso, mensajes de error accionables
 \end{itemize}
 
-\subsubsection{RAG y Corpus}
+\subsubsection{RAG y corpus}
 
 \begin{itemize}
     \item Aumentar corpus HTML/CSS a 2000+ documentos con ejemplos etiquetados por componentes y layouts (dashboard, e-commerce, forms)
@@ -1055,9 +1055,9 @@ Interfaz visual (Streamlit) & C & C & C & D \\
     \item Persistir metadatos (tokens, longitud, nivel de nesting) para re-ranking semántico más fino
 \end{itemize}
 
-\subsection{Mediano Plazo (3-6 meses)}
+\subsection{Mediano plazo (3-6 meses)}
 
-\subsubsection{Agentes y Orquestación}
+\subsubsection{Agentes y orquestación}
 
 \begin{itemize}
     \item Retries con backoff exponencial y degradación graciosa cuando LLM viola contrato
@@ -1069,7 +1069,7 @@ Interfaz visual (Streamlit) & C & C & C & D \\
     \item Tests de contratos (Pydantic) per-commit con golden outputs
 \end{itemize}
 
-\subsubsection{Evaluación y Calidad}
+\subsubsection{Evaluación y calidad}
 
 \begin{itemize}
     \item Definir conjunto de imágenes canónicas con métricas de fidelidad:
@@ -1082,7 +1082,7 @@ Interfaz visual (Streamlit) & C & C & C & D \\
     \item Tests robustos (actualmente solo MVP sin coverage completo)
 \end{itemize}
 
-\subsubsection{Costos y Observabilidad}
+\subsubsection{Costos y observabilidad}
 
 \begin{itemize}
     \item Estimación y tracking de costos por invocación
@@ -1091,7 +1091,7 @@ Interfaz visual (Streamlit) & C & C & C & D \\
     \item Dashboard de métricas de negocio (tiempo de generación, tasa de éxito, etc.)
 \end{itemize}
 
-\subsection{Largo Plazo (6+ meses)}
+\subsection{Largo plazo (6+ meses)}
 
 \begin{itemize}
     \item Fine-tuning de modelos propios para Visual y Code Agents
@@ -1101,9 +1101,9 @@ Interfaz visual (Streamlit) & C & C & C & D \\
     \item Multi-tenancy para empresas con estilos diferentes
 \end{itemize}
 
-\section{Desafíos Afrontados Durante el Trabajo}
+\section{Desafíos afrontados durante el trabajo}
 
-\subsection{Elección de Modelos}
+\subsection{Elección de modelos}
 
 \textbf{Problema}: Por restricción presupuestaria, los miembros del equipo no contaban con acceso a modelos pagos de forma continua.
 
@@ -1115,7 +1115,7 @@ Interfaz visual (Streamlit) & C & C & C & D \\
     \item Implementar configuración flexible vía .env para cambiar modelos sin modificar código
 \end{itemize}
 
-\subsection{Ejecución en Pipeline de Procesos}
+\subsection{Ejecución en pipeline de procesos}
 
 \textbf{Problema}: Al comienzo se usaba Makefile para levantar agentes, servers y artefactos del sistema. Esto era tedioso y requería múltiples terminales, haciendo lenta la etapa de desarrollo y QA.
 
@@ -1127,7 +1127,7 @@ Interfaz visual (Streamlit) & C & C & C & D \\
     \item Beneficio adicional: portabilidad para despliegue en producción
 \end{itemize}
 
-\subsection{Gestión de Configuraciones}
+\subsection{Gestión de configuraciones}
 
 \textbf{Problema}: Múltiples archivos .env (raíz, Visual Agent, Code Agent) causaban confusión sobre qué variables usar dónde.
 
@@ -1138,7 +1138,7 @@ Interfaz visual (Streamlit) & C & C & C & D \\
     \item Validación de configuraciones al inicio de cada agente
 \end{itemize}
 
-\subsection{Sincronización de Versiones de Librerías}
+\subsection{Sincronización de versiones de librerías}
 
 \textbf{Problema}: Conflictos de dependencias entre Streamlit, Guardrails y Sentence-Transformers.
 
@@ -1149,7 +1149,7 @@ Interfaz visual (Streamlit) & C & C & C & D \\
     \item Separar dependencias de desarrollo y producción
 \end{itemize}
 
-\subsection{Performance de Evaluaciones}
+\subsection{Performance de evaluaciones}
 
 \textbf{Problema}: Evaluaciones con 900 documentos y re-ranking eran lentas en CPUs locales.
 
@@ -1164,7 +1164,7 @@ Interfaz visual (Streamlit) & C & C & C & D \\
 
 El enfoque multi-agente combinado con RAG híbrido y guardrails ha demostrado ser efectivo para reducir alucinación y mejorar la utilidad del código HTML/Tailwind generado a partir de imágenes de interfaz de usuario.
 
-\subsection{Logros Principales}
+\subsection{Logros principales}
 
 \begin{itemize}
     \item \textbf{Sistema funcional end-to-end}: UI operativa con flujo completo desde imagen hasta código descargable
@@ -1175,7 +1175,7 @@ El enfoque multi-agente combinado con RAG híbrido y guardrails ha demostrado se
     \item \textbf{Despliegue simplificado}: Docker Compose + script automático
 \end{itemize}
 
-\subsection{Desafíos Persistentes}
+\subsection{Desafíos persistentes}
 
 \begin{itemize}
     \item Validación robusta de schemas con tolerancia a errores
@@ -1184,7 +1184,7 @@ El enfoque multi-agente combinado con RAG híbrido y guardrails ha demostrado se
     \item Limitaciones de modelos gratuitos (rate limits, disponibilidad)
 \end{itemize}
 
-\subsection{Valor del Proyecto}
+\subsection{Valor del proyecto}
 
 El sistema ya ofrece una base funcional y extensible para:
 
@@ -1197,7 +1197,7 @@ El sistema ya ofrece una base funcional y extensible para:
 
 Con el roadmap propuesto, el sistema puede evolucionar hacia mayor fidelidad visual, estabilidad operativa y medición reproducible de calidad, acercándose a un producto comercialmente viable.
 
-\subsection{Próximos Pasos Inmediatos}
+\subsection{Próximos pasos inmediatos}
 
 \begin{enumerate}
     \item Expandir corpus a 2000+ documentos
@@ -1207,11 +1207,11 @@ Con el roadmap propuesto, el sistema puede evolucionar hacia mayor fidelidad vis
     \item Documentar casos de uso con empresas piloto
 \end{enumerate}
 
-\section{Anexo - Setup y Operación}
+\section{Anexo - Setup y operación}
 
-\subsection{Requisitos Previos}
+\subsection{Requisitos previos}
 
-\subsubsection{Producción (Recomendado)}
+\subsubsection{Producción (recomendado)}
 \begin{itemize}
     \item Docker y Docker Compose instalados
     \item Puertos disponibles: 8501, 10000, 10001
@@ -1230,7 +1230,7 @@ Con el roadmap propuesto, el sistema puede evolucionar hacia mayor fidelidad vis
     \item Entorno virtual (venv o conda)
 \end{itemize}
 
-\subsection{Instalación y Ejecución - Producción}
+\subsection{Instalación y ejecución - Producción}
 
 \textbf{Paso 1}: Ejecutar script de configuración automática
 
@@ -1260,7 +1260,7 @@ bash run.sh
 
 \textbf{Nota}: La primera ejecución puede tardar $\sim$30 minutos descargando imágenes Docker ($\sim$30 GB).
 
-\subsection{Instalación y Ejecución - Desarrollo}
+\subsection{Instalación y ejecución - Desarrollo}
 
 \textbf{Paso 1}: Instalar dependencias
 
@@ -1320,7 +1320,7 @@ make run-server
 
 \textbf{Paso 5}: Acceder a \url{http://localhost:8501}
 
-\subsection{Comandos Make Disponibles}
+\subsection{Comandos make disponibles}
 
 \begin{lstlisting}[language=bash]
 # Descargar dataset WebSight
@@ -1338,13 +1338,13 @@ make run-server          # Puerto 8501
 make evaluate-retrieval
 \end{lstlisting}
 
-\subsection{Guardrails - Descripción Técnica}
+\subsection{Guardrails - Descripción técnica}
 
 Guardrails UI es una interfaz para supervisar, gestionar y controlar aplicaciones impulsadas por IA, especialmente modelos de lenguaje. Proporciona un entorno visual donde los desarrolladores pueden definir reglas, límites y flujos de trabajo, asegurando que las respuestas cumplan con criterios de seguridad, precisión y consistencia.
 
 Guardrail Hub es una plataforma centralizada para gestionar, compartir y reutilizar conjuntos de guardrails, facilitando el acceso a plantillas predefinidas y manteniendo consistencia en múltiples proyectos.
 \newpage
-\subsubsection{Guardrails Utilizados en el Proyecto}
+\subsubsection{Guardrails utilizados en el proyecto}
 
 \setlength\LTleft{0pt}
 \setlength\LTright{0pt}
@@ -1380,7 +1380,7 @@ IsHTMLField       & No & code         & Verifica formato HTML válido. Basado en
 \end{small}
 
 
-\subsection{Sistema de Logging}
+\subsection{Sistema de logging}
 
 \textbf{Librería}: Loguru
 
@@ -1408,7 +1408,7 @@ IsHTMLField       & No & code         & Verifica formato HTML válido. Basado en
     \item Métricas de búsqueda RAG (scores, latencias)
 \end{itemize}
 
-\subsection{Dataset WebSight - Detalles Técnicos}
+\subsection{Dataset WebSight - Detalles técnicos}
 
 \textbf{Fuente}: HuggingFace (\texttt{HuggingFaceM4/WebSight})
 
