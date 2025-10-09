@@ -7,6 +7,8 @@ for p in (str(SRC_DIR), str(APP_DIR)):
     if p not in sys.path:
         sys.path.insert(0, p)
 # ---------------------------------------
+from src.config import create_all_directories
+create_all_directories()
 
 from app.ui.preloader import show_preloader, hide_preloader
 

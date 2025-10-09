@@ -1,4 +1,5 @@
 import streamlit as st
+import uuid
 
 _DEFAULTS = {
     "primary": "#8B5CF6", 
@@ -21,8 +22,6 @@ def _cfg():
         f = "montserrat"
     cfg["font"] = f
     return cfg
-
-import streamlit as st
 
 def violet_button(label, key, *, on_click=None, disabled=False, help=None, full_width=False, color="var(--primary, #8B5CF6)"):
     """
@@ -83,6 +82,57 @@ def violet_button(label, key, *, on_click=None, disabled=False, help=None, full_
     </style>
     """, unsafe_allow_html=True)
     return clicked
+
+
+def code_block_no_hover_hide(code: str, *, language: str = "html", key: str | None = None):
+    """
+    Renderiza un st.code y neutraliza cualquier regla de :hover que intente ocultarlo
+    (opacity/visibility/display/transform/pointer-events). Sólo afecta a este bloque.
+    También fuerza height:auto cuando Streamlit pone <pre height="0">.
+    """
+    anchor = key or f"code_{uuid.uuid4().hex[:8]}"
+    st.markdown(f'<div id="{anchor}"></div>', unsafe_allow_html=True)
+
+    st.code(code, language=language)
+
+    st.markdown(
+        f"""
+<style>
+/* Contenedor inmediato que Streamlit inserta después del ancla */
+div#{anchor} + div,
+div#{anchor} + div * {{
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+  filter: none !important;
+  pointer-events: auto !important;
+}}
+div#{anchor} + div pre,
+div#{anchor} + div code,
+div#{anchor} + div [data-testid="stCodeBlock"] {{
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  overflow: auto !important;
+}}
+/* Fix específico para <pre height="0"> */
+div#{anchor} + div pre[height="0"] {{
+  height: auto !important;
+  min-height: 120px !important;   /* ajustable */
+  max-height: none !important;
+}}
+/* Mantener visible incluso cuando hay hover en el propio bloque o descendientes */
+div#{anchor} + div:hover,
+div#{anchor} + div:hover * {{
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+  filter: none !important;
+}}
+</style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def apply_theme():
@@ -184,7 +234,6 @@ def apply_theme():
   }}
 
   /* ===== BOTONES (todas las variantes) ===== */
-  /* 1) Clásicos */
   .stButton > button,
   .stDownloadButton > button,
   [data-testid="stFormSubmitButton"] > button,
@@ -207,7 +256,6 @@ def apply_theme():
     transform: translateY(-0.5px) !important;
   }}
 
-  /* 2) DOM moderno (1.33+): baseButton */
   [data-testid^="baseButton"],
   div[role="button"][data-testid^="baseButton"] {{
     background: {primary} !important;
@@ -256,3 +304,75 @@ def apply_theme():
   }}
 </style>
 """, unsafe_allow_html=True)
+    
+ 
+    st.markdown("""
+    <style>
+    /* ——— SOLO el contenedor de st.code ——— */
+    div[data-testid="stCode"], .stCode {
+    position: relative !important;   /* referencia para posicionar el copy */
+    }
+
+    /* 1) Matar cualquier efecto de hover dentro del code */
+    div[data-testid="stCode"]:hover,
+    div[data-testid="stCode"]:hover *,
+    .stCode:hover,
+    .stCode:hover * {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+    filter: none !important;
+    animation: none !important;
+    transition: none !important;
+    }
+
+    /* 2) Asegurar que el <pre> nunca colapse (Streamlit a veces lo pone con height="0") */
+    div[data-testid="stCode"] pre[height="0"],
+    .stCode pre[height="0"] {
+    height: auto !important;
+    min-height: 120px !important;
+    max-height: none !important;
+    overflow: auto !important;
+    }
+
+    /* 3) El wrapper del botón Copy NO debe cubrir todo el bloque */
+    div[data-testid="stCode"] .st-emotion-cache-chk1w8.e1rzn78k3 {
+    position: static !important;           /* evita overlay absoluto sobre todo el code */
+    width: auto !important;
+    height: auto !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    pointer-events: none !important;       /* el wrapper ignora el mouse… */
+    }
+
+    /* …y el botón sí capta el click, posicionado en la esquina */
+    div[data-testid="stCode"] [data-testid="stCodeCopyButton"]{
+    position: absolute !important;
+    top: 8px !important;
+    right: 8px !important;
+    pointer-events: auto !important;
+    z-index: 2 !important;
+    background: rgba(0,0,0,.35) !important;
+    border: 1px solid rgba(255,255,255,.15) !important;
+    border-radius: 8px !important;
+    }
+
+    /* 4) Mantener el <pre> por debajo del botón pero SIEMPRE visible */
+    div[data-testid="stCode"] pre { 
+    position: relative !important; 
+    z-index: 0 !important; 
+    }
+
+    /* 5) Extra por si cambia la clase de Emotion: eliminar cualquier hover que intente ocultar */
+    div[data-testid="stCode"] *[class*="st-emotion-cache-"]:hover {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+    filter: none !important;
+    animation: none !important;
+    transition: none !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+
