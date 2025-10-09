@@ -1,6 +1,7 @@
 import streamlit as st
 from app.services.agents import get_orchestrator, get_rag_agent
 from app.ui.components.code_preview import html_preview
+from app.ui.theme import stable_code_block
 
 # 👇 Agregar esto arriba del archivo
 import re
@@ -41,46 +42,6 @@ def neutralize_root_hover_hide(html: str) -> str:
 import streamlit as st
 import uuid
 
-def stable_code_block(code: str, *, language: str = "html", key: str | None = None):
-    """
-    Renderiza un st.code y neutraliza cualquier regla CSS de :hover que intente
-    ocultarlo (display:none, opacity:0, visibility:hidden, transform, etc.).
-    No toca el resto de la app.
-    """
-    anchor = key or f"code_{uuid.uuid4().hex[:8]}"
-    st.markdown(f'<div id="{anchor}"></div>', unsafe_allow_html=True)
-
-    st.code(code, language=language)
-
-    st.markdown(
-                f"""
-        <style>
-        /* Selecciona el contenedor que Streamlit pone justo después del ancla */
-        div#{anchor} + div, 
-        div#{anchor} + div * {{
-        /* aseguremos que esté visible por más que exista algún :hover global */
-        visibility: visible !important;
-        transform: none !important;
-        }}
-        div#{anchor} + div pre,
-        div#{anchor} + div code,
-        div#{anchor} + div [data-testid="stCodeBlock"] {{
-        display: block !important;
-        visibility: visible !important;
-        }}
-        /* cuando haya hover por cualquier ancestro o el propio bloque */
-        div#{anchor} + div:hover,
-        div#{anchor} + div:hover *,
-        div#{anchor} + div *:hover {{
-        opacity: 1 !important;
-        visibility: visible !important;
-        transform: none !important;
-        filter: none !important;
-        }}
-        </style>
-                """,
-        unsafe_allow_html=True,
-    )
 
 def render():
     st.header("🔎 Query Interface")
@@ -121,7 +82,7 @@ def render():
                     with st.expander(f"Pattern #{i} — {meta.get('filename', doc_id)} (score {score:.3f})"):
                         st.markdown(f"**Tipo:** {meta.get('doc_type','?')} — **Desc.:** {meta.get('description','—')}")
                         html_code = meta.get("html_code", chunk)
-                        st.code(html_code[:1500] + ("..." if len(html_code)>1500 else ""), language="html")
+                        stable_code_block(html_code[:1500] + ("..." if len(html_code)>1500 else ""), language="html")
                         with st.popover("👁️ Previsualizar"):
                              safe_html = neutralize_root_hover_hide(html_code)
                              html_preview(safe_html)
@@ -147,7 +108,7 @@ def render():
             st.subheader("💻 Código generado")
             render_code = html_code or "<!-- empty -->"
 
-            st.code(render_code, language="html")
+            stable_code_block(render_code, language="html", key="gen_code_block")
             
             with st.expander("🛠️ Detalles"):
                 st.json(result.get("generation_metadata", {}))

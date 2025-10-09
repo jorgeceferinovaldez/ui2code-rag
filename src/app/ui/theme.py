@@ -10,6 +10,25 @@ _DEFAULTS = {
     "font":    "montserrat",  
 }
 
+def stable_code_block(code: str, *, language: str="html", key: str|None=None):
+    import uuid, streamlit as st
+    anchor = key or f"code_{uuid.uuid4().hex[:8]}"
+    st.markdown(f'<div id="{anchor}"></div>', unsafe_allow_html=True)
+    st.code(code, language=language)
+    st.markdown(f"""
+    <style>
+    div#{anchor} + div, div#{anchor} + div * {{
+      opacity: 1 !important; visibility: visible !important;
+      filter: none !important; transform: none !important;
+      transition: none !important; animation: none !important;
+    }}
+    div#{anchor} + div pre[height="0"]{{height:auto !important;min-height:120px !important;}}
+    /* move copy button, disable wrapper overlay locally */
+    div#{anchor} + div > :last-child{{position:static !important;pointer-events:none !important;background:transparent !important;}}
+    div#{anchor} + div [data-testid="stCodeCopyButton"]{{position:absolute !important;top:8px !important;right:8px !important;pointer-events:auto !important;z-index:3 !important;}}
+    </style>
+    """, unsafe_allow_html=True)
+    
 def set_theme_globals(**overrides):
     if "_theme_defaults" not in st.session_state:
         st.session_state["_theme_defaults"] = dict(_DEFAULTS)
@@ -323,4 +342,65 @@ def apply_theme():
     </style>
     """, unsafe_allow_html=True)
 
+    st.markdown("""
+    <style id="st-code-hover-fix">
+    /* Scope only inside Streamlit code blocks */
+    div[data-testid="stCode"]{ position:relative !important; }
+
+    /* 1) The copy-button wrapper (last child) must not overlay the <pre> */
+    div[data-testid="stCode"] > :last-child{
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    pointer-events: none !important;  /* wrapper ignores mouse */
+    transform: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    }
+
+    /* The actual copy button remains clickable and goes to the top-right */
+    div[data-testid="stCode"] [data-testid="stCodeCopyButton"]{
+    position: absolute !important;
+    top: 8px !important;
+    right: 8px !important;
+    z-index: 3 !important;
+    pointer-events: auto !important;
+    }
+
+    /* 2) Keep <pre>/<code> ALWAYS visible, regardless of any :hover */
+    div[data-testid="stCode"] pre,
+    div[data-testid="stCode"] code{
+    position: relative !important;
+    z-index: 2 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    filter: none !important;
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+    }
+
+    /* Kill any hover-driven effect inside the code block */
+    div[data-testid="stCode"]:hover,
+    div[data-testid="stCode"]:hover *,
+    div[data-testid="stCode"] *:hover{
+    opacity: 1 !important;
+    visibility: visible !important;
+    filter: none !important;
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+    }
+
+    /* 3) Fix Streamlit occasionally setting <pre height="0"> */
+    div[data-testid="stCode"] pre[height="0"]{
+    height: auto !important;
+    min-height: 120px !important;
+    max-height: none !important;
+    overflow: auto !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 

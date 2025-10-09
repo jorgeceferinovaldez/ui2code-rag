@@ -5,6 +5,7 @@ import streamlit as st
 from app.services.agents import get_rag_agent
 from app.services.rag_pipeline import get_legacy_pdf_pipeline
 from src.config import project_dir, corpus_dir
+from app.ui.theme import stable_code_block
 
 def _get_pdf_status(pipeline=None):
     """
@@ -115,7 +116,7 @@ def render():
         st.metric("BM25 Search", bm25_status)
 
     examples_dir = rag_status.get("examples_directory", "Unknown")
-    st.code(f"Corpus Path: {examples_dir}", language="bash")
+    stable_code_block(f"Corpus Path: {examples_dir}", language="bash", key="corpus_path_block")
 
     # ---- Detalle índices ----
     st.markdown("### 🔗 Search Index Details")

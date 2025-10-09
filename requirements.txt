@@ -10,7 +10,7 @@ pyprojroot>=0.3.0
 pyparsing>=3.2.0
 
 # Web framework and UI
-streamlit>=1.28.0
+streamlit>=1.44.1
 
 # AI and LLM integration
 openai>=1.0.0                    # OpenAI/OpenRouter API client

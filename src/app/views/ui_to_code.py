@@ -2,6 +2,7 @@ import streamlit as st, asyncio
 from datetime import datetime
 from app.services.agents import get_orchestrator, get_rag_agent
 from app.ui.components.code_preview import html_preview
+from app.ui.theme import stable_code_block
 from src.agents.orchestator_agent.utils import save_analysis_result, save_generated_code
 from src.config import temp_images_dir
 from PIL import Image
@@ -64,7 +65,7 @@ def render():
                     for i,(doc_id,chunk,meta,score) in enumerate(patterns,1):
                         with st.expander(f"Pattern #{i} — {meta.get('filename','?')} (score {score:.3f})"):
                             st.markdown(f"**Tipo:** {meta.get('type','?')} — **Desc.:** {meta.get('description','—')}")
-                            st.code(chunk[:700] + ("..." if len(chunk)>700 else ""), language="html")
+                            stable_code_block(chunk[:700] + ("..." if len(chunk)>700 else ""), language="html", key="gen_code_block")
 
                 msg.info("Paso 3/3: Generando código…"); pbar.progress(85)
                 with st.spinner("Code Agent…"):
@@ -76,7 +77,7 @@ def render():
                 html_code = result.get("html_code","")
                 st.subheader("💻 HTML/Tailwind generado")
           
-                st.code(html_code or "<!-- empty -->", language="html")
+                stable_code_block(html_code or "<!-- empty -->", language="html", key="gen_code_block")
                 st.subheader("🌐 Preview")
                 html_preview(html_code)
 
