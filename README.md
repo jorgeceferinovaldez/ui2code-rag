@@ -1233,7 +1233,7 @@ Para guías detalladas, consulta la documentación del código fuente.
 
 ---
 
-## ** Videos de ejemplo **
+## **Videos de ejemplo**
 [Carpeta con los videos de la aplicación](https://drive.google.com/drive/folders/1DS68D12jQxjuATL0jGYlaH_6iKPWqfyj?usp=sharing
 )
 ## Troubleshooting de Cambios Recientes
